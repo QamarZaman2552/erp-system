@@ -16,6 +16,7 @@ public interface IAuthService
 public interface IEmailService
 {
     Task SendEmailAsync(string to, string subject, string htmlBody);
+    Task SendEmailWithAttachmentAsync(string to, string subject, string htmlBody, string fileName, byte[] fileBytes, string contentType = "application/pdf");
     Task SendPasswordResetEmailAsync(string to, string resetLink);
     Task SendPayslipEmailAsync(string to, string employeeName, byte[] payslipPdf);
     Task SendLeaveApprovalEmailAsync(string to, string employeeName, bool isApproved);

@@ -22,6 +22,11 @@ public class FakeEmailService : IEmailService
         Sent.Add((to, subject));
         return Task.CompletedTask;
     }
+    public Task SendEmailWithAttachmentAsync(string to, string subject, string htmlBody, string fileName, byte[] fileBytes, string contentType = "application/pdf")
+    {
+        Sent.Add((to, subject));
+        return Task.CompletedTask;
+    }
     public Task SendPasswordResetEmailAsync(string to, string resetLink)
     {
         Sent.Add((to, "password-reset"));

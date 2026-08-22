@@ -85,7 +85,12 @@ public class ProductsController : ControllerBase
 public class SalesOrdersController : ControllerBase
 {
     private readonly ISalesOrderService _salesOrderService;
-    public SalesOrdersController(ISalesOrderService salesOrderService) => _salesOrderService = salesOrderService;
+    private readonly ICurrentUserService _currentUser;
+    public SalesOrdersController(ISalesOrderService salesOrderService, ICurrentUserService currentUser)
+    {
+        _salesOrderService = salesOrderService;
+        _currentUser = currentUser;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
@@ -94,10 +99,43 @@ public class SalesOrdersController : ControllerBase
         return Ok(result);
     }
 
+    // Reports must be registered before {id:guid} routes — "reports" is not a guid anyway
+    [HttpGet("reports/monthly")]
+    public async Task<IActionResult> MonthlyReport([FromQuery] int year = 0)
+    {
+        if (year == 0) year = DateTime.UtcNow.Year;
+        var list = await _salesOrderService.GetMonthlyReportAsync(year);
+        return Ok(list);
+    }
+
+    [HttpGet("reports/by-customer")]
+    public async Task<IActionResult> CustomerWiseReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        => Ok(await _salesOrderService.GetCustomerWiseReportAsync(from, to));
+
+    [HttpGet("reports/by-product")]
+    public async Task<IActionResult> ProductWiseReport([FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] int top = 10)
+        => Ok(await _salesOrderService.GetProductWiseReportAsync(from, to, top));
+
+    [HttpPost("overdue-reminders")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> SendOverdueReminders()
+    {
+        var count = await _salesOrderService.SendOverdueRemindersAsync();
+        return Ok(new { success = true, data = $"{count} overdue reminder(s) processed" });
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var res = await _salesOrderService.GetByIdAsync(id);
+        if (!res.Success) return NotFound(res);
+        return Ok(res);
+    }
+
+    [HttpGet("{id:guid}/detail")]
+    public async Task<IActionResult> GetDetail(Guid id)
+    {
+        var res = await _salesOrderService.GetDetailAsync(id);
         if (!res.Success) return NotFound(res);
         return Ok(res);
     }
@@ -113,6 +151,64 @@ public class SalesOrdersController : ControllerBase
     public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] string status)
     {
         var res = await _salesOrderService.UpdateStatusAsync(id, status);
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("{id:guid}/confirm")]
+    public async Task<IActionResult> Confirm(Guid id)
+    {
+        var res = await _salesOrderService.ConfirmAsync(id, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var res = await _salesOrderService.CancelAsync(id, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("{id:guid}/return")]
+    public async Task<IActionResult> Return(Guid id)
+    {
+        var res = await _salesOrderService.ReturnAsync(id, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("{id:guid}/payments")]
+    public async Task<IActionResult> RecordPayment(Guid id, [FromBody] RecordPaymentDto dto)
+    {
+        var res = await _salesOrderService.RecordPaymentAsync(id, dto, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpGet("{id:guid}/payments")]
+    public async Task<IActionResult> GetPayments(Guid id)
+        => Ok(await _salesOrderService.GetPaymentsAsync(id));
+
+    [HttpGet("{id:guid}/invoice-pdf")]
+    public async Task<IActionResult> InvoicePdf(Guid id)
+    {
+        try
+        {
+            var pdf = await _salesOrderService.GenerateInvoicePdfAsync(id);
+            return File(pdf, "application/pdf", $"invoice-{id:N}.pdf");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { success = false, message = ex.Message });
+        }
+    }
+
+    [HttpPost("{id:guid}/email-invoice")]
+    public async Task<IActionResult> EmailInvoice(Guid id)
+    {
+        var res = await _salesOrderService.EmailInvoiceAsync(id);
         if (!res.Success) return BadRequest(res);
         return Ok(res);
     }
@@ -133,7 +229,12 @@ public class SalesOrdersController : ControllerBase
 public class PurchaseOrdersController : ControllerBase
 {
     private readonly IPurchaseOrderService _purchaseOrderService;
-    public PurchaseOrdersController(IPurchaseOrderService purchaseOrderService) => _purchaseOrderService = purchaseOrderService;
+    private readonly ICurrentUserService _currentUser;
+    public PurchaseOrdersController(IPurchaseOrderService purchaseOrderService, ICurrentUserService currentUser)
+    {
+        _purchaseOrderService = purchaseOrderService;
+        _currentUser = currentUser;
+    }
 
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
@@ -142,10 +243,30 @@ public class PurchaseOrdersController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("reports/monthly")]
+    public async Task<IActionResult> MonthlyReport([FromQuery] int year = 0)
+    {
+        if (year == 0) year = DateTime.UtcNow.Year;
+        var list = await _purchaseOrderService.GetMonthlyReportAsync(year);
+        return Ok(list);
+    }
+
+    [HttpGet("reports/by-supplier")]
+    public async Task<IActionResult> SupplierWiseReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        => Ok(await _purchaseOrderService.GetSupplierWiseReportAsync(from, to));
+
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var res = await _purchaseOrderService.GetByIdAsync(id);
+        if (!res.Success) return NotFound(res);
+        return Ok(res);
+    }
+
+    [HttpGet("{id:guid}/detail")]
+    public async Task<IActionResult> GetDetail(Guid id)
+    {
+        var res = await _purchaseOrderService.GetDetailAsync(id);
         if (!res.Success) return NotFound(res);
         return Ok(res);
     }
@@ -166,6 +287,63 @@ public class PurchaseOrdersController : ControllerBase
         if (!res.Success) return BadRequest(res);
         return Ok(res);
     }
+
+    [HttpPost("{id:guid}/confirm")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> Confirm(Guid id)
+    {
+        var res = await _purchaseOrderService.ConfirmAsync(id, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("{id:guid}/cancel")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> Cancel(Guid id)
+    {
+        var res = await _purchaseOrderService.CancelAsync(id, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("{id:guid}/receive")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> ReceiveItems(Guid id, [FromBody] List<ReceiveItemDto> items)
+    {
+        var res = await _purchaseOrderService.ReceiveItemsAsync(id, items, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPut("{id:guid}/supplier-invoice")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> SetSupplierInvoiceNumber(Guid id, [FromBody] SetSupplierInvoiceDto dto)
+    {
+        var res = await _purchaseOrderService.SetSupplierInvoiceNumberAsync(id, dto.InvoiceNumber);
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("{id:guid}/email-to-supplier")]
+    public async Task<IActionResult> EmailToSupplier(Guid id)
+    {
+        var res = await _purchaseOrderService.EmailToSupplierAsync(id);
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("{id:guid}/payments")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> RecordPayment(Guid id, [FromBody] RecordPaymentDto dto)
+    {
+        var res = await _purchaseOrderService.RecordPaymentAsync(id, dto, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpGet("{id:guid}/payments")]
+    public async Task<IActionResult> GetPayments(Guid id)
+        => Ok(await _purchaseOrderService.GetPaymentsAsync(id));
 
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = "Admin")]

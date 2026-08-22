@@ -16,3 +16,4 @@ public enum UserRole { Admin, HR, Manager, Employee }
 public enum Gender { Male, Female, Other }
 public enum TransactionType { Income, Expense }
 public enum StockMovementType { In, Out, Adjustment, Return }
+public enum PaymentMethod { Cash, BankTransfer, Card, Cheque }

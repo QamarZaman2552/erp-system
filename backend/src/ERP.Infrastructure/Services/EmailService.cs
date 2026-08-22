@@ -50,6 +50,39 @@ public class EmailService : IEmailService
     public async Task SendEmailAsync(string to, string subject, string htmlBody)
         => await SendAsync(to, subject, htmlBody);
 
+    public async Task SendEmailWithAttachmentAsync(string to, string subject, string htmlBody, string fileName, byte[] fileBytes, string contentType = "application/pdf")
+    {
+        var username = _config["EmailSettings:Username"];
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            _logger.LogWarning("SMTP not configured. Skipped email '{Subject}' to {To}", subject, to);
+            return;
+        }
+
+        try
+        {
+            var message = new MimeMessage();
+            message.From.Add(new MailboxAddress(_config["EmailSettings:FromName"] ?? "Enterprise ERP", username));
+            message.To.Add(MailboxAddress.Parse(to));
+            message.Subject = subject;
+
+            var builder = new BodyBuilder { HtmlBody = htmlBody };
+            var parts = contentType.Split('/');
+            builder.Attachments.Add(fileName, fileBytes, new ContentType(parts[0], parts.Length > 1 ? parts[1] : "octet-stream"));
+            message.Body = builder.ToMessageBody();
+
+            using var smtp = new SmtpClient();
+            await smtp.ConnectAsync(_config["EmailSettings:Host"], int.Parse(_config["EmailSettings:Port"] ?? "587"), SecureSocketOptions.StartTls);
+            await smtp.AuthenticateAsync(username, _config["EmailSettings:Password"]);
+            await smtp.SendAsync(message);
+            await smtp.DisconnectAsync(true);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send email '{Subject}' to {To}. Continuing without email.", subject, to);
+        }
+    }
+
     public async Task SendPasswordResetEmailAsync(string to, string resetLink)
     {
         var html = $"""

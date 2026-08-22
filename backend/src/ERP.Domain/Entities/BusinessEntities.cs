@@ -72,6 +72,7 @@ public class SalesOrder : BaseEntity
     public Customer Customer { get; set; } = null!;
     public DateTime OrderDate { get; set; }
     public DateTime? DeliveryDate { get; set; }
+    public DateTime? DueDate { get; set; }
     public OrderStatus Status { get; set; } = OrderStatus.Draft;
     public PaymentStatus PaymentStatus { get; set; } = PaymentStatus.Pending;
     public decimal SubTotal { get; set; }
@@ -84,6 +85,7 @@ public class SalesOrder : BaseEntity
     public string? InvoiceUrl { get; set; }
 
     public ICollection<SalesOrderItem> Items { get; set; } = [];
+    public ICollection<Payment> Payments { get; set; } = [];
 }
 
 public class SalesOrderItem : BaseEntity
@@ -111,10 +113,12 @@ public class PurchaseOrder : BaseEntity
     public decimal TaxAmount { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal PaidAmount { get; set; }
+    public string? SupplierInvoiceNumber { get; set; }
     public string? Notes { get; set; }
     public string? CreatedByUserId { get; set; }
 
     public ICollection<PurchaseOrderItem> Items { get; set; } = [];
+    public ICollection<Payment> Payments { get; set; } = [];
 }
 
 public class PurchaseOrderItem : BaseEntity
@@ -127,6 +131,20 @@ public class PurchaseOrderItem : BaseEntity
     public decimal UnitPrice { get; set; }
     public decimal TotalPrice { get; set; }
     public int ReceivedQuantity { get; set; }
+}
+
+public class Payment : BaseEntity
+{
+    public Guid? SalesOrderId { get; set; }
+    public SalesOrder? SalesOrder { get; set; }
+    public Guid? PurchaseOrderId { get; set; }
+    public PurchaseOrder? PurchaseOrder { get; set; }
+    public decimal Amount { get; set; }
+    public PaymentMethod Method { get; set; } = PaymentMethod.Cash;
+    public string? Reference { get; set; }
+    public string? Notes { get; set; }
+    public DateTime PaidAt { get; set; } = DateTime.UtcNow;
+    public string? CreatedByUserId { get; set; }
 }
 
 // ─── Finance ──────────────────────────────────────────────────────────────────

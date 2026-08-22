@@ -240,8 +240,9 @@ export interface SalesOrder {
   orderNumber: string;
   customerName: string;
   orderDate: string;
-  status: 'Draft' | 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled';
-  paymentStatus: 'Pending' | 'Partial' | 'Paid' | 'Overdue';
+  dueDate?: string;
+  status: 'Draft' | 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Returned';
+  paymentStatus: 'Pending' | 'Partial' | 'Paid' | 'Overdue' | 'Refunded';
   totalAmount: number;
   paidAmount: number;
 }
@@ -252,8 +253,20 @@ export interface PurchaseOrder {
   supplierName: string;
   orderDate: string;
   status: 'Draft' | 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled';
-  paymentStatus: 'Pending' | 'Partial' | 'Paid';
+  paymentStatus: 'Pending' | 'Partial' | 'Paid' | 'Overdue' | 'Refunded';
   totalAmount: number;
+  paidAmount: number;
+}
+
+export interface OrderPayment {
+  id: string;
+  salesOrderId?: string;
+  purchaseOrderId?: string;
+  amount: number;
+  method: string;
+  reference?: string;
+  notes?: string;
+  paidAt: string;
 }
 
 export interface FinanceTransaction {

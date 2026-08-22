@@ -649,7 +649,8 @@ public class ProductCategoryService : IProductCategoryService
 public class SalesOrderService : ISalesOrderService
 {
     private readonly AppDbContext _db;
-    public SalesOrderService(AppDbContext db) => _db = db;
+    private readonly IEmailService _email;
+    public SalesOrderService(AppDbContext db, IEmailService email) { _db = db; _email = email; }
 
     public async Task<PagedResult<SalesOrderDto>> GetAllAsync(PaginationParams pagination)
     {
@@ -658,7 +659,7 @@ public class SalesOrderService : ISalesOrderService
         var items = await query.OrderByDescending(s => s.CreatedAt)
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .Select(s => new SalesOrderDto(s.Id, s.OrderNumber, s.Customer.Name, s.OrderDate, s.Status, s.PaymentStatus, s.TotalAmount, s.PaidAmount))
+            .Select(s => new SalesOrderDto(s.Id, s.OrderNumber, s.Customer.Name, s.OrderDate, s.DueDate, s.Status, s.PaymentStatus, s.TotalAmount, s.PaidAmount))
             .ToListAsync();
 
         return new PagedResult<SalesOrderDto> { Items = items, TotalCount = total, Page = pagination.Page, PageSize = pagination.PageSize };
@@ -668,8 +669,21 @@ public class SalesOrderService : ISalesOrderService
     {
         var s = await _db.SalesOrders.Include(x => x.Customer).FirstOrDefaultAsync(x => x.Id == id);
         if (s == null) return ApiResponse<SalesOrderDto>.Fail("Order not found");
-        return ApiResponse<SalesOrderDto>.Ok(new SalesOrderDto(s.Id, s.OrderNumber, s.Customer.Name, s.OrderDate, s.Status, s.PaymentStatus, s.TotalAmount, s.PaidAmount));
+        return ApiResponse<SalesOrderDto>.Ok(new SalesOrderDto(s.Id, s.OrderNumber, s.Customer.Name, s.OrderDate, s.DueDate, s.Status, s.PaymentStatus, s.TotalAmount, s.PaidAmount));
     }
+
+    public async Task<ApiResponse<SalesOrderDetailDto>> GetDetailAsync(Guid id)
+    {
+        var s = await _db.SalesOrders.Include(x => x.Customer).Include(x => x.Items).ThenInclude(i => i.Product).FirstOrDefaultAsync(x => x.Id == id);
+        if (s == null) return ApiResponse<SalesOrderDetailDto>.Fail("Order not found");
+        return ApiResponse<SalesOrderDetailDto>.Ok(MapDetail(s));
+    }
+
+    private static SalesOrderDetailDto MapDetail(SalesOrder s) => new(
+        s.Id, s.OrderNumber, s.CustomerId, s.Customer.Name, s.Customer.Email,
+        s.OrderDate, s.DeliveryDate, s.DueDate, s.Status, s.PaymentStatus,
+        s.SubTotal, s.TaxAmount, s.DiscountAmount, s.TotalAmount, s.PaidAmount, s.Notes,
+        s.Items.Select(i => new SalesOrderLineDto(i.ProductId, i.Product.Name, i.Quantity, i.UnitPrice, i.Discount, i.TotalPrice)).ToList());
 
     public async Task<ApiResponse<SalesOrderDto>> CreateAsync(CreateSalesOrderDto dto)
     {
@@ -677,12 +691,14 @@ public class SalesOrderService : ISalesOrderService
         var orderNumber = $"SO-{DateTime.UtcNow.Year}-{count:D4}";
 
         decimal subtotal = 0;
+        decimal itemDiscounts = 0;
         var orderItems = new List<SalesOrderItem>();
 
         foreach (var item in dto.Items)
         {
             var lineTotal = (item.Quantity * item.UnitPrice) - item.Discount;
             subtotal += lineTotal;
+            itemDiscounts += item.Discount;
             orderItems.Add(new SalesOrderItem
             {
                 ProductId = item.ProductId,
@@ -693,7 +709,7 @@ public class SalesOrderService : ISalesOrderService
             });
         }
 
-        var tax = subtotal * 0.10m;
+        var tax = Math.Round(subtotal * 0.10m, 2);
         var total = subtotal + tax;
 
         var order = new SalesOrder
@@ -702,8 +718,10 @@ public class SalesOrderService : ISalesOrderService
             CustomerId = dto.CustomerId,
             OrderDate = dto.OrderDate,
             DeliveryDate = dto.DeliveryDate,
+            DueDate = dto.DueDate ?? dto.OrderDate.AddDays(30),
             SubTotal = subtotal,
             TaxAmount = tax,
+            DiscountAmount = itemDiscounts,
             TotalAmount = total,
             Status = OrderStatus.Pending,
             PaymentStatus = PaymentStatus.Pending,
@@ -715,7 +733,7 @@ public class SalesOrderService : ISalesOrderService
         await _db.SaveChangesAsync();
 
         var cust = await _db.Customers.FindAsync(dto.CustomerId);
-        return ApiResponse<SalesOrderDto>.Ok(new SalesOrderDto(order.Id, order.OrderNumber, cust?.Name ?? "", order.OrderDate, order.Status, order.PaymentStatus, order.TotalAmount, 0), "Sales order created");
+        return ApiResponse<SalesOrderDto>.Ok(new SalesOrderDto(order.Id, order.OrderNumber, cust?.Name ?? "", order.OrderDate, order.DueDate, order.Status, order.PaymentStatus, order.TotalAmount, 0), "Sales order created");
     }
 
     public async Task<ApiResponse<string>> UpdateStatusAsync(Guid id, string status)
@@ -734,21 +752,366 @@ public class SalesOrderService : ISalesOrderService
         return ApiResponse<string>.Fail("Invalid status value");
     }
 
+    public async Task<ApiResponse<string>> ConfirmAsync(Guid id, string userId)
+    {
+        var order = await _db.SalesOrders.Include(o => o.Items).ThenInclude(i => i.Product).FirstOrDefaultAsync(o => o.Id == id);
+        if (order == null) return ApiResponse<string>.Fail("Order not found");
+        if (order.Status != OrderStatus.Draft && order.Status != OrderStatus.Pending)
+            return ApiResponse<string>.Fail($"Only Draft/Pending orders can be confirmed (current: {order.Status})");
+
+        // Validate stock before confirming
+        foreach (var item in order.Items)
+        {
+            if (item.Product.CurrentStock < item.Quantity)
+                return ApiResponse<string>.Fail($"Insufficient stock for '{item.Product.Name}' (available: {item.Product.CurrentStock}, required: {item.Quantity})");
+        }
+
+        // Deduct stock
+        foreach (var item in order.Items)
+        {
+            var previous = item.Product.CurrentStock;
+            item.Product.CurrentStock -= item.Quantity;
+            _db.StockMovements.Add(new StockMovement
+            {
+                ProductId = item.ProductId,
+                Type = StockMovementType.Out,
+                Quantity = item.Quantity,
+                PreviousStock = previous,
+                NewStock = item.Product.CurrentStock,
+                Reference = order.OrderNumber,
+                Notes = "Sales order confirmation",
+                CreatedByUserId = userId
+            });
+        }
+
+        order.Status = OrderStatus.Confirmed;
+        order.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return ApiResponse<string>.Ok($"Order {order.OrderNumber} confirmed — stock deducted, invoice ready");
+    }
+
+    public async Task<ApiResponse<string>> CancelAsync(Guid id, string userId)
+    {
+        var order = await _db.SalesOrders.Include(o => o.Items).ThenInclude(i => i.Product).FirstOrDefaultAsync(o => o.Id == id);
+        if (order == null) return ApiResponse<string>.Fail("Order not found");
+        if (order.Status == OrderStatus.Shipped || order.Status == OrderStatus.Delivered)
+            return ApiResponse<string>.Fail("Shipped/Delivered orders cannot be cancelled — use return instead");
+        if (order.Status == OrderStatus.Cancelled)
+            return ApiResponse<string>.Fail("Order is already cancelled");
+
+        var wasConfirmed = order.Status == OrderStatus.Confirmed;
+
+        // Restore stock if it was deducted at confirmation
+        if (wasConfirmed)
+        {
+            foreach (var item in order.Items)
+            {
+                var previous = item.Product.CurrentStock;
+                item.Product.CurrentStock += item.Quantity;
+                _db.StockMovements.Add(new StockMovement
+                {
+                    ProductId = item.ProductId,
+                    Type = StockMovementType.In,
+                    Quantity = item.Quantity,
+                    PreviousStock = previous,
+                    NewStock = item.Product.CurrentStock,
+                    Reference = order.OrderNumber,
+                    Notes = "Sales order cancellation",
+                    CreatedByUserId = userId
+                });
+            }
+        }
+
+        order.Status = OrderStatus.Cancelled;
+        order.PaymentStatus = order.PaidAmount > 0 ? PaymentStatus.Refunded : PaymentStatus.Pending;
+        order.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return ApiResponse<string>.Ok($"Order {order.OrderNumber} cancelled" + (wasConfirmed ? " and stock restored" : ""));
+    }
+
     public async Task<ApiResponse<string>> DeleteAsync(Guid id)
     {
         var order = await _db.SalesOrders.FindAsync(id);
         if (order == null) return ApiResponse<string>.Fail("Order not found");
+        if (order.Status != OrderStatus.Draft && order.Status != OrderStatus.Pending && order.Status != OrderStatus.Cancelled)
+            return ApiResponse<string>.Fail("Only Draft/Pending/Cancelled orders can be deleted");
+        if (order.PaidAmount > 0) return ApiResponse<string>.Fail("Cannot delete an order with recorded payments");
+
         order.IsDeleted = true;
         order.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
         return ApiResponse<string>.Ok("Order deleted");
+    }
+
+    public async Task<ApiResponse<string>> ReturnAsync(Guid id, string userId)
+    {
+        var order = await _db.SalesOrders.Include(o => o.Items).ThenInclude(i => i.Product).FirstOrDefaultAsync(o => o.Id == id);
+        if (order == null) return ApiResponse<string>.Fail("Order not found");
+        if (order.Status == OrderStatus.Returned || order.Status == OrderStatus.Cancelled)
+            return ApiResponse<string>.Fail($"Cannot return a {order.Status} order");
+
+        // Restore stock for all items
+        foreach (var item in order.Items)
+        {
+            var previous = item.Product.CurrentStock;
+            item.Product.CurrentStock += item.Quantity;
+            _db.StockMovements.Add(new StockMovement
+            {
+                ProductId = item.ProductId,
+                Type = StockMovementType.Return,
+                Quantity = item.Quantity,
+                PreviousStock = previous,
+                NewStock = item.Product.CurrentStock,
+                Reference = order.OrderNumber,
+                Notes = "Sales return",
+                CreatedByUserId = userId
+            });
+        }
+
+        // Refund recorded payments as finance expense
+        if (order.PaidAmount > 0 && order.PaymentStatus != PaymentStatus.Refunded)
+        {
+            var category = await FinanceCategoryHelper.GetOrCreateAsync(_db, "Sales Refund", TransactionType.Expense);
+            _db.FinanceTransactions.Add(new FinanceTransaction
+            {
+                CategoryId = category.Id,
+                Type = TransactionType.Expense,
+                Amount = order.PaidAmount,
+                TransactionDate = DateTime.UtcNow,
+                Description = $"Refund for sales order {order.OrderNumber}",
+                Reference = order.OrderNumber,
+                CreatedByUserId = userId
+            });
+            order.PaymentStatus = PaymentStatus.Refunded;
+        }
+        else if (order.PaidAmount == 0)
+        {
+            order.PaymentStatus = PaymentStatus.Pending;
+        }
+
+        order.Status = OrderStatus.Returned;
+        order.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return ApiResponse<string>.Ok($"Order {order.OrderNumber} returned — stock restored" + (order.PaidAmount > 0 ? $", refund of ${order.PaidAmount:F2} recorded" : ""));
+    }
+
+    public async Task<ApiResponse<PaymentDto>> RecordPaymentAsync(Guid id, RecordPaymentDto dto, string userId)
+    {
+        var order = await _db.SalesOrders.FindAsync(id);
+        if (order == null) return ApiResponse<PaymentDto>.Fail("Order not found");
+        if (order.Status == OrderStatus.Cancelled || order.Status == OrderStatus.Returned)
+            return ApiResponse<PaymentDto>.Fail($"Cannot record payment on a {order.Status} order");
+        if (dto.Amount <= 0) return ApiResponse<PaymentDto>.Fail("Payment amount must be greater than zero");
+
+        var remaining = order.TotalAmount - order.PaidAmount;
+        if (remaining <= 0) return ApiResponse<PaymentDto>.Fail("Invoice is already fully paid");
+        if (dto.Amount > remaining) return ApiResponse<PaymentDto>.Fail($"Payment exceeds remaining balance (${remaining:F2})");
+
+        var payment = new Payment
+        {
+            SalesOrderId = id,
+            Amount = dto.Amount,
+            Method = dto.Method,
+            Reference = dto.Reference,
+            Notes = dto.Notes,
+            PaidAt = DateTime.UtcNow,
+            CreatedByUserId = userId
+        };
+        _db.Payments.Add(payment);
+
+        order.PaidAmount += dto.Amount;
+        order.PaymentStatus = order.PaidAmount >= order.TotalAmount ? PaymentStatus.Paid : PaymentStatus.Partial;
+
+        // Auto-record revenue in finance
+        var category = await FinanceCategoryHelper.GetOrCreateAsync(_db, "Sales Revenue", TransactionType.Income);
+        _db.FinanceTransactions.Add(new FinanceTransaction
+        {
+            CategoryId = category.Id,
+            Type = TransactionType.Income,
+            Amount = dto.Amount,
+            TransactionDate = DateTime.UtcNow,
+            Description = $"Payment received for {order.OrderNumber}",
+            Reference = order.OrderNumber,
+            CreatedByUserId = userId
+        });
+
+        await _db.SaveChangesAsync();
+        return ApiResponse<PaymentDto>.Ok(new PaymentDto(payment.Id, payment.SalesOrderId, payment.PurchaseOrderId, payment.Amount, payment.Method, payment.Reference, payment.Notes, payment.PaidAt), "Payment recorded");
+    }
+
+    public async Task<List<PaymentDto>> GetPaymentsAsync(Guid id)
+    {
+        return await _db.Payments.AsNoTracking()
+            .Where(p => p.SalesOrderId == id)
+            .OrderByDescending(p => p.PaidAt)
+            .Select(p => new PaymentDto(p.Id, p.SalesOrderId, p.PurchaseOrderId, p.Amount, p.Method, p.Reference, p.Notes, p.PaidAt))
+            .ToListAsync();
+    }
+
+    public async Task<byte[]> GenerateInvoicePdfAsync(Guid id)
+    {
+        var s = await _db.SalesOrders.Include(x => x.Customer).Include(x => x.Items).ThenInclude(i => i.Product).FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw new InvalidOperationException("Order not found");
+
+        var lines = new List<string>
+        {
+            "##INVOICE",
+            $"Invoice #: {s.OrderNumber}",
+            $"Customer: {s.Customer.Name}" + (string.IsNullOrWhiteSpace(s.Customer.Email) ? "" : $" ({s.Customer.Email})"),
+            $"Order Date: {s.OrderDate:dd MMM yyyy}    Due Date: {s.DueDate:dd MMM yyyy}",
+            "",
+            "##Items"
+        };
+        lines.Add(string.Format("{0,-32} {1,6} {2,12} {3,10} {4,14}", "Product", "Qty", "Unit Price", "Discount", "Total"));
+        foreach (var i in s.Items)
+            lines.Add(string.Format("{0,-32} {1,6} {2,12:N2} {3,10:N2} {4,14:N2}", Trunc(i.Product.Name, 32), i.Quantity, i.UnitPrice, i.Discount, i.TotalPrice));
+
+        lines.Add("");
+        lines.Add($"SubTotal: ${s.SubTotal:N2}");
+        lines.Add($"Discount: -${s.DiscountAmount:N2}");
+        lines.Add($"Tax (10%): ${s.TaxAmount:N2}");
+        lines.Add($"##TOTAL: ${s.TotalAmount:N2}");
+        lines.Add($"Paid: ${s.PaidAmount:N2}");
+        lines.Add($"Balance Due: ${(s.TotalAmount - s.PaidAmount):N2}");
+        lines.Add("");
+        lines.Add(s.Notes ?? "");
+        lines.Add("Thank you for your business!");
+
+        return SimplePdfGenerator.Generate($"Invoice {s.OrderNumber}", lines);
+    }
+
+    public async Task<ApiResponse<string>> EmailInvoiceAsync(Guid id)
+    {
+        var s = await _db.SalesOrders.Include(x => x.Customer).FirstOrDefaultAsync(x => x.Id == id);
+        if (s == null) return ApiResponse<string>.Fail("Order not found");
+        if (string.IsNullOrWhiteSpace(s.Customer.Email)) return ApiResponse<string>.Fail("Customer has no email address on file");
+
+        var pdf = await GenerateInvoicePdfAsync(id);
+        var html = $"""
+            <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto">
+              <h2 style="color:#6366f1">Invoice {s.OrderNumber}</h2>
+              <p>Dear {s.Customer.Name},</p>
+              <p>Please find your invoice attached.</p>
+              <ul>
+                <li>Total: <strong>${s.TotalAmount:N2}</strong></li>
+                <li>Paid: ${s.PaidAmount:N2}</li>
+                <li>Balance Due: <strong>${(s.TotalAmount - s.PaidAmount):N2}</strong></li>
+                <li>Due Date: {s.DueDate:dd MMM yyyy}</li>
+              </ul>
+              <p style="color:#64748b;font-size:13px">Thank you for your business!</p>
+            </div>
+            """;
+        await _email.SendEmailWithAttachmentAsync(s.Customer.Email, $"Invoice {s.OrderNumber}", html, $"invoice-{s.OrderNumber}.pdf", pdf);
+        return ApiResponse<string>.Ok($"Invoice emailed to {s.Customer.Email}");
+    }
+
+    public async Task<int> SendOverdueRemindersAsync()
+    {
+        var today = DateTime.UtcNow.Date;
+        var overdueOrders = await _db.SalesOrders.Include(s => s.Customer)
+            .Where(s => !s.IsDeleted
+                && s.DueDate != null && s.DueDate.Value.Date < today
+                && s.PaymentStatus != PaymentStatus.Paid
+                && s.PaymentStatus != PaymentStatus.Refunded
+                && s.Status != OrderStatus.Cancelled
+                && s.Status != OrderStatus.Returned)
+            .ToListAsync();
+
+        var count = 0;
+        foreach (var s in overdueOrders)
+        {
+            s.PaymentStatus = PaymentStatus.Overdue;
+            s.UpdatedAt = DateTime.UtcNow;
+            count++;
+
+            if (!string.IsNullOrWhiteSpace(s.Customer.Email))
+            {
+                var html = $"""
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto">
+                      <h2 style="color:#dc2626">Payment Reminder — Invoice {s.OrderNumber}</h2>
+                      <p>Dear {s.Customer.Name},</p>
+                      <p>This is a reminder that invoice <strong>{s.OrderNumber}</strong> is <strong>overdue</strong>.</p>
+                      <ul>
+                        <li>Balance Due: <strong>${(s.TotalAmount - s.PaidAmount):N2}</strong></li>
+                        <li>Was Due: {s.DueDate:dd MMM yyyy}</li>
+                      </ul>
+                      <p>Please arrange payment at your earliest convenience.</p>
+                    </div>
+                    """;
+                await _email.SendEmailAsync(s.Customer.Email, $"Overdue Payment Reminder — {s.OrderNumber}", html);
+            }
+        }
+
+        if (overdueOrders.Count > 0) await _db.SaveChangesAsync();
+        return count;
+    }
+
+    public async Task<List<MonthlySalesReportDto>> GetMonthlyReportAsync(int year)
+    {
+        var rows = await _db.SalesOrders.AsNoTracking()
+            .Where(s => s.OrderDate.Year == year && s.Status != OrderStatus.Cancelled && s.Status != OrderStatus.Returned)
+            .Select(s => new { s.OrderDate.Month, s.SubTotal, s.TaxAmount, s.TotalAmount, s.PaidAmount })
+            .ToListAsync();
+
+        return rows.GroupBy(r => r.Month)
+            .Select(g => new MonthlySalesReportDto(year, g.Key, g.Count(),
+                g.Sum(x => x.SubTotal), g.Sum(x => x.TaxAmount), g.Sum(x => x.TotalAmount), g.Sum(x => x.PaidAmount)))
+            .OrderBy(r => r.Month)
+            .ToList();
+    }
+
+    public async Task<List<CustomerSalesReportDto>> GetCustomerWiseReportAsync(DateTime? from, DateTime? to)
+    {
+        var query = _db.SalesOrders.AsNoTracking().Where(s => s.Status != OrderStatus.Cancelled && s.Status != OrderStatus.Returned);
+        if (from.HasValue) query = query.Where(s => s.OrderDate >= from.Value);
+        if (to.HasValue) query = query.Where(s => s.OrderDate <= to.Value);
+
+        var rows = await query.Select(s => new { s.CustomerId, CustomerName = s.Customer.Name, s.TotalAmount, s.PaidAmount }).ToListAsync();
+
+        return rows.GroupBy(r => new { r.CustomerId, r.CustomerName })
+            .Select(g => new CustomerSalesReportDto(g.Key.CustomerId, g.Key.CustomerName, g.Count(), g.Sum(x => x.TotalAmount), g.Sum(x => x.PaidAmount)))
+            .OrderByDescending(r => r.TotalAmount)
+            .ToList();
+    }
+
+    public async Task<List<ProductSalesReportDto>> GetProductWiseReportAsync(DateTime? from, DateTime? to, int top = 10)
+    {
+        var query = _db.SalesOrderItems.AsNoTracking().Where(i => i.SalesOrder.Status != OrderStatus.Cancelled && i.SalesOrder.Status != OrderStatus.Returned);
+        if (from.HasValue) query = query.Where(i => i.SalesOrder.OrderDate >= from.Value);
+        if (to.HasValue) query = query.Where(i => i.SalesOrder.OrderDate <= to.Value);
+
+        var rows = await query.Select(i => new { i.ProductId, ProductName = i.Product.Name, i.Quantity, Revenue = i.TotalPrice }).ToListAsync();
+
+        return rows.GroupBy(r => new { r.ProductId, r.ProductName })
+            .Select(g => new ProductSalesReportDto(g.Key.ProductId, g.Key.ProductName, g.Sum(x => x.Quantity), g.Sum(x => x.Revenue)))
+            .OrderByDescending(r => r.Revenue)
+            .Take(top)
+            .ToList();
+    }
+
+    private static string Trunc(string s, int max) => s.Length <= max ? s : s[..max];
+}
+
+internal static class FinanceCategoryHelper
+{
+    public static async Task<FinanceCategory> GetOrCreateAsync(AppDbContext db, string name, TransactionType type)
+    {
+        var cat = await db.FinanceCategories.FirstOrDefaultAsync(c => c.Name == name);
+        if (cat == null)
+        {
+            cat = new FinanceCategory { Name = name, Type = type };
+            db.FinanceCategories.Add(cat);
+            await db.SaveChangesAsync();
+        }
+        return cat;
     }
 }
 
 public class PurchaseOrderService : IPurchaseOrderService
 {
     private readonly AppDbContext _db;
-    public PurchaseOrderService(AppDbContext db) => _db = db;
+    private readonly IEmailService _email;
+    public PurchaseOrderService(AppDbContext db, IEmailService email) { _db = db; _email = email; }
 
     public async Task<PagedResult<PurchaseOrderDto>> GetAllAsync(PaginationParams pagination)
     {
@@ -769,6 +1132,19 @@ public class PurchaseOrderService : IPurchaseOrderService
         if (p == null) return ApiResponse<PurchaseOrderDto>.Fail("Purchase order not found");
         return ApiResponse<PurchaseOrderDto>.Ok(new PurchaseOrderDto(p.Id, p.OrderNumber, p.Supplier.Name, p.OrderDate, p.Status, p.PaymentStatus, p.TotalAmount));
     }
+
+    public async Task<ApiResponse<PurchaseOrderDetailDto>> GetDetailAsync(Guid id)
+    {
+        var po = await _db.PurchaseOrders.Include(x => x.Supplier).Include(x => x.Items).ThenInclude(i => i.Product).FirstOrDefaultAsync(x => x.Id == id);
+        if (po == null) return ApiResponse<PurchaseOrderDetailDto>.Fail("Purchase order not found");
+        return ApiResponse<PurchaseOrderDetailDto>.Ok(MapDetail(po));
+    }
+
+    private static PurchaseOrderDetailDto MapDetail(PurchaseOrder p) => new(
+        p.Id, p.OrderNumber, p.SupplierId, p.Supplier.Name, p.Supplier.Email,
+        p.OrderDate, p.DeliveryDate, p.Status, p.PaymentStatus,
+        p.SubTotal, p.TaxAmount, p.TotalAmount, p.PaidAmount, p.SupplierInvoiceNumber, p.Notes,
+        p.Items.Select(i => new PurchaseOrderLineDto(i.ProductId, i.Product.Name, i.Quantity, i.UnitPrice, i.TotalPrice, i.ReceivedQuantity)).ToList());
 
     public async Task<ApiResponse<PurchaseOrderDto>> CreateAsync(CreatePurchaseOrderDto dto)
     {
@@ -791,7 +1167,7 @@ public class PurchaseOrderService : IPurchaseOrderService
             });
         }
 
-        var tax = subtotal * 0.10m;
+        var tax = Math.Round(subtotal * 0.10m, 2);
         var total = subtotal + tax;
 
         var po = new PurchaseOrder
@@ -832,10 +1208,210 @@ public class PurchaseOrderService : IPurchaseOrderService
         return ApiResponse<string>.Fail("Invalid status value");
     }
 
+    public async Task<ApiResponse<string>> ConfirmAsync(Guid id, string userId)
+    {
+        var po = await _db.PurchaseOrders.FindAsync(id);
+        if (po == null) return ApiResponse<string>.Fail("Purchase order not found");
+        if (po.Status != OrderStatus.Draft && po.Status != OrderStatus.Pending)
+            return ApiResponse<string>.Fail($"Only Draft/Pending orders can be confirmed (current: {po.Status})");
+
+        po.Status = OrderStatus.Confirmed;
+        po.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return ApiResponse<string>.Ok($"Purchase order {po.OrderNumber} confirmed — can now be sent to supplier and received against");
+    }
+
+    public async Task<ApiResponse<string>> CancelAsync(Guid id, string userId)
+    {
+        var po = await _db.PurchaseOrders.FindAsync(id);
+        if (po == null) return ApiResponse<string>.Fail("Purchase order not found");
+        if (po.Status == OrderStatus.Delivered || po.Status == OrderStatus.Cancelled)
+            return ApiResponse<string>.Fail(po.Status == OrderStatus.Delivered ? "Delivered orders cannot be cancelled" : "Order is already cancelled");
+
+        po.Status = OrderStatus.Cancelled;
+        po.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return ApiResponse<string>.Ok($"Purchase order {po.OrderNumber} cancelled");
+    }
+
+    public async Task<ApiResponse<PurchaseOrderDetailDto>> ReceiveItemsAsync(Guid id, List<ReceiveItemDto> items, string userId)
+    {
+        var po = await _db.PurchaseOrders.Include(x => x.Supplier).Include(x => x.Items).ThenInclude(i => i.Product).FirstOrDefaultAsync(x => x.Id == id);
+        if (po == null) return ApiResponse<PurchaseOrderDetailDto>.Fail("Purchase order not found");
+        if (po.Status != OrderStatus.Confirmed && po.Status != OrderStatus.Shipped && po.Status != OrderStatus.Pending)
+            return ApiResponse<PurchaseOrderDetailDto>.Fail($"Cannot receive items on a {po.Status} order");
+        if (items == null || items.Count == 0) return ApiResponse<PurchaseOrderDetailDto>.Fail("No items to receive");
+
+        foreach (var dto in items)
+        {
+            var line = po.Items.FirstOrDefault(i => i.ProductId == dto.ProductId);
+            if (line == null) return ApiResponse<PurchaseOrderDetailDto>.Fail("Product does not belong to this purchase order");
+            if (dto.Quantity <= 0) return ApiResponse<PurchaseOrderDetailDto>.Fail("Receive quantity must be greater than zero");
+
+            var outstanding = line.Quantity - line.ReceivedQuantity;
+            if (dto.Quantity > outstanding)
+                return ApiResponse<PurchaseOrderDetailDto>.Fail($"Cannot receive {dto.Quantity} of '{line.Product.Name}' — only {outstanding} outstanding");
+        }
+
+        // Apply receipts: add to inventory with stock movements
+        foreach (var dto in items)
+        {
+            var line = po.Items.First(i => i.ProductId == dto.ProductId);
+            line.ReceivedQuantity += dto.Quantity;
+
+            var product = line.Product;
+            var previous = product.CurrentStock;
+            product.CurrentStock += dto.Quantity;
+
+            _db.StockMovements.Add(new StockMovement
+            {
+                ProductId = product.Id,
+                Type = StockMovementType.In,
+                Quantity = dto.Quantity,
+                PreviousStock = previous,
+                NewStock = product.CurrentStock,
+                Reference = po.OrderNumber,
+                Notes = "Purchase order receipt",
+                CreatedByUserId = userId
+            });
+        }
+
+        bool fullyReceived = po.Items.All(i => i.ReceivedQuantity >= i.Quantity);
+        po.Status = fullyReceived ? OrderStatus.Delivered : po.Status == OrderStatus.Pending ? OrderStatus.Confirmed : po.Status;
+        po.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+
+        var message = fullyReceived
+            ? $"All items received — stock added to inventory, PO marked Delivered (complete)"
+            : $"Partial receipt recorded — {po.Items.Sum(i => i.ReceivedQuantity)}/{po.Items.Sum(i => i.Quantity)} units received so far";
+        return ApiResponse<PurchaseOrderDetailDto>.Ok(MapDetail(po), message);
+    }
+
+    public async Task<ApiResponse<string>> SetSupplierInvoiceNumberAsync(Guid id, string invoiceNumber)
+    {
+        var po = await _db.PurchaseOrders.FindAsync(id);
+        if (po == null) return ApiResponse<string>.Fail("Purchase order not found");
+        po.SupplierInvoiceNumber = invoiceNumber;
+        po.UpdatedAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
+        return ApiResponse<string>.Ok($"Supplier invoice number saved: {invoiceNumber}");
+    }
+
+    public async Task<ApiResponse<string>> EmailToSupplierAsync(Guid id)
+    {
+        var po = await _db.PurchaseOrders.Include(x => x.Supplier).Include(x => x.Items).ThenInclude(i => i.Product).FirstOrDefaultAsync(x => x.Id == id);
+        if (po == null) return ApiResponse<string>.Fail("Purchase order not found");
+        if (string.IsNullOrWhiteSpace(po.Supplier.Email)) return ApiResponse<string>.Fail("Supplier has no email address on file");
+
+        var rows = string.Join("", po.Items.Select(i =>
+            $"<tr><td style='padding:6px 10px;border:1px solid #e2e8f0'>{i.Product.Name}</td><td style='padding:6px 10px;border:1px solid #e2e8f0;text-align:center'>{i.ReceivedQuantity}/{i.Quantity}</td><td style='padding:6px 10px;border:1px solid #e2e8f0;text-align:right'>${i.UnitPrice:N2}</td><td style='padding:6px 10px;border:1px solid #e2e8f0;text-align:right'>${i.TotalPrice:N2}</td></tr>"));
+
+        var html = $"""
+            <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto">
+              <h2 style="color:#6366f1">Purchase Order {po.OrderNumber}</h2>
+              <p>Dear {po.Supplier.ContactPerson ?? po.Supplier.Name},</p>
+              <p>Please find our purchase order below:</p>
+              <table style="border-collapse:collapse;width:100%">
+                <thead><tr style="background:#f1f5f9"><th style="padding:6px 10px;border:1px solid #e2e8f0">Product</th><th style="padding:6px 10px;border:1px solid #e2e8f0">Qty</th><th style="padding:6px 10px;border:1px solid #e2e8f0">Unit Price</th><th style="padding:6px 10px;border:1px solid #e2e8f0">Total</th></tr></thead>
+                <tbody>{rows}</tbody>
+              </table>
+              <p style="text-align:right"><strong>Grand Total: ${po.TotalAmount:N2}</strong> (incl. tax ${po.TaxAmount:N2})</p>
+              <p>Expected delivery: {(po.DeliveryDate?.ToString("dd MMM yyyy") ?? "as per agreement")}</p>
+              <p style="color:#64748b;font-size:13px">{po.Notes}</p>
+            </div>
+            """;
+        await _email.SendEmailAsync(po.Supplier.Email, $"Purchase Order {po.OrderNumber}", html);
+        return ApiResponse<string>.Ok($"Purchase order emailed to {po.Supplier.Email}");
+    }
+
+    public async Task<ApiResponse<PaymentDto>> RecordPaymentAsync(Guid id, RecordPaymentDto dto, string userId)
+    {
+        var po = await _db.PurchaseOrders.FindAsync(id);
+        if (po == null) return ApiResponse<PaymentDto>.Fail("Purchase order not found");
+        if (po.Status == OrderStatus.Cancelled) return ApiResponse<PaymentDto>.Fail("Cannot record payment on a cancelled order");
+        if (dto.Amount <= 0) return ApiResponse<PaymentDto>.Fail("Payment amount must be greater than zero");
+
+        var remaining = po.TotalAmount - po.PaidAmount;
+        if (remaining <= 0) return ApiResponse<PaymentDto>.Fail("This purchase order is already fully paid");
+        if (dto.Amount > remaining) return ApiResponse<PaymentDto>.Fail($"Payment exceeds remaining balance (${remaining:F2})");
+
+        var payment = new Payment
+        {
+            PurchaseOrderId = id,
+            Amount = dto.Amount,
+            Method = dto.Method,
+            Reference = dto.Reference,
+            Notes = dto.Notes,
+            PaidAt = DateTime.UtcNow,
+            CreatedByUserId = userId
+        };
+        _db.Payments.Add(payment);
+
+        po.PaidAmount += dto.Amount;
+        po.PaymentStatus = po.PaidAmount >= po.TotalAmount ? PaymentStatus.Paid : PaymentStatus.Partial;
+
+        // Auto-record expense in finance
+        var cat = await FinanceCategoryHelper.GetOrCreateAsync(_db, "Purchase Cost", TransactionType.Expense);
+        _db.FinanceTransactions.Add(new FinanceTransaction
+        {
+            CategoryId = cat.Id,
+            Type = TransactionType.Expense,
+            Amount = dto.Amount,
+            TransactionDate = DateTime.UtcNow,
+            Description = $"Supplier payment for {po.OrderNumber}",
+            Reference = po.OrderNumber,
+            CreatedByUserId = userId
+        });
+
+        await _db.SaveChangesAsync();
+        return ApiResponse<PaymentDto>.Ok(new PaymentDto(payment.Id, payment.SalesOrderId, payment.PurchaseOrderId, payment.Amount, payment.Method, payment.Reference, payment.Notes, payment.PaidAt), "Payment recorded");
+    }
+
+    public async Task<List<PaymentDto>> GetPaymentsAsync(Guid id)
+    {
+        return await _db.Payments.AsNoTracking()
+            .Where(p => p.PurchaseOrderId == id)
+            .OrderByDescending(p => p.PaidAt)
+            .Select(p => new PaymentDto(p.Id, p.SalesOrderId, p.PurchaseOrderId, p.Amount, p.Method, p.Reference, p.Notes, p.PaidAt))
+            .ToListAsync();
+    }
+
+    public async Task<List<MonthlyPurchaseReportDto>> GetMonthlyReportAsync(int year)
+    {
+        var rows = await _db.PurchaseOrders.AsNoTracking()
+            .Where(p => p.OrderDate.Year == year && p.Status != OrderStatus.Cancelled)
+            .Select(p => new { p.OrderDate.Month, p.TotalAmount, p.PaidAmount })
+            .ToListAsync();
+
+        return rows.GroupBy(r => r.Month)
+            .Select(g => new MonthlyPurchaseReportDto(year, g.Key, g.Count(), g.Sum(x => x.TotalAmount), g.Sum(x => x.PaidAmount)))
+            .OrderBy(r => r.Month)
+            .ToList();
+    }
+
+    public async Task<List<SupplierPurchaseReportDto>> GetSupplierWiseReportAsync(DateTime? from, DateTime? to)
+    {
+        var query = _db.PurchaseOrders.AsNoTracking().Where(p => p.Status != OrderStatus.Cancelled);
+        if (from.HasValue) query = query.Where(p => p.OrderDate >= from.Value);
+        if (to.HasValue) query = query.Where(p => p.OrderDate <= to.Value);
+
+        var rows = await query.Select(p => new { p.SupplierId, SupplierName = p.Supplier.Name, p.TotalAmount, p.PaidAmount }).ToListAsync();
+
+        return rows.GroupBy(r => new { r.SupplierId, r.SupplierName })
+            .Select(g => new SupplierPurchaseReportDto(g.Key.SupplierId, g.Key.SupplierName, g.Count(), g.Sum(x => x.TotalAmount), g.Sum(x => x.PaidAmount)))
+            .OrderByDescending(r => r.TotalAmount)
+            .ToList();
+    }
+
     public async Task<ApiResponse<string>> DeleteAsync(Guid id)
     {
         var po = await _db.PurchaseOrders.FindAsync(id);
         if (po == null) return ApiResponse<string>.Fail("Purchase order not found");
+        if (po.Status != OrderStatus.Draft && po.Status != OrderStatus.Pending && po.Status != OrderStatus.Cancelled)
+            return ApiResponse<string>.Fail("Only Draft/Pending/Cancelled orders can be deleted");
+        if (po.PaidAmount > 0) return ApiResponse<string>.Fail("Cannot delete an order with recorded payments");
+        if (po.Items.Any(i => i.ReceivedQuantity > 0)) return ApiResponse<string>.Fail("Cannot delete an order with received items");
+
         po.IsDeleted = true;
         po.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();

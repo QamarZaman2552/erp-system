@@ -82,6 +82,11 @@ import { UiService } from '../../core/services/ui.service';
           <span class="nav-text">Sales &amp; Invoices</span>
         </a>
 
+        <a routerLink="/purchase" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessTeam()">
+          <span class="nav-icon">🚚</span>
+          <span class="nav-text">Purchase Orders</span>
+        </a>
+
         <div class="nav-label">ACCOUNTING</div>
 
         <a routerLink="/finance" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessFinance()">

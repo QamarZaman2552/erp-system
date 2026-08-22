@@ -70,6 +70,12 @@ export const routes: Routes = [
     loadComponent: () => import('./modules/sales/sales.component').then(m => m.SalesComponent)
   },
   {
+    path: 'purchase',
+    canActivate: [authGuard],
+    data: { roles: ['Admin', 'HR', 'Manager'] },
+    loadComponent: () => import('./modules/purchase/purchase.component').then(m => m.PurchaseComponent)
+  },
+  {
     path: 'finance',
     canActivate: [authGuard],
     data: { roles: ['Admin', 'HR', 'Manager'] },

@@ -76,17 +76,46 @@ public record CreateProductCategoryDto(string Name, string? Description);
 
 public record SalesOrderDto(
     Guid Id, string OrderNumber, string CustomerName, DateTime OrderDate,
-    OrderStatus Status, PaymentStatus PaymentStatus, decimal TotalAmount, decimal PaidAmount);
+    DateTime? DueDate, OrderStatus Status, PaymentStatus PaymentStatus, decimal TotalAmount, decimal PaidAmount);
+public record SalesOrderDetailDto(
+    Guid Id, string OrderNumber, Guid CustomerId, string CustomerName, string? CustomerEmail,
+    DateTime OrderDate, DateTime? DeliveryDate, DateTime? DueDate, OrderStatus Status,
+    PaymentStatus PaymentStatus, decimal SubTotal, decimal TaxAmount, decimal DiscountAmount,
+    decimal TotalAmount, decimal PaidAmount, string? Notes, List<SalesOrderLineDto> Items);
+public record SalesOrderLineDto(Guid ProductId, string ProductName, int Quantity, decimal UnitPrice, decimal Discount, decimal TotalPrice);
 public record CreateSalesOrderDto(Guid CustomerId, DateTime OrderDate, DateTime? DeliveryDate,
-    string? Notes, List<SalesOrderItemDto> Items);
+    DateTime? DueDate, string? Notes, List<SalesOrderItemDto> Items);
 public record SalesOrderItemDto(Guid ProductId, int Quantity, decimal UnitPrice, decimal Discount);
 
 public record PurchaseOrderDto(
     Guid Id, string OrderNumber, string SupplierName, DateTime OrderDate,
     OrderStatus Status, PaymentStatus PaymentStatus, decimal TotalAmount);
+public record PurchaseOrderDetailDto(
+    Guid Id, string OrderNumber, Guid SupplierId, string SupplierName, string? SupplierEmail,
+    DateTime OrderDate, DateTime? DeliveryDate, OrderStatus Status, PaymentStatus PaymentStatus,
+    decimal SubTotal, decimal TaxAmount, decimal TotalAmount, decimal PaidAmount,
+    string? SupplierInvoiceNumber, string? Notes, List<PurchaseOrderLineDto> Items);
+public record PurchaseOrderLineDto(Guid ProductId, string ProductName, int Quantity, decimal UnitPrice, decimal TotalPrice, int ReceivedQuantity);
 public record CreatePurchaseOrderDto(Guid SupplierId, DateTime OrderDate, DateTime? DeliveryDate,
     string? Notes, List<PurchaseOrderItemDto> Items);
 public record PurchaseOrderItemDto(Guid ProductId, int Quantity, decimal UnitPrice);
+
+// ─── Payments / Lifecycle ─────────────────────────────────────────────────────
+
+public record PaymentDto(Guid Id, Guid? SalesOrderId, Guid? PurchaseOrderId, decimal Amount,
+    PaymentMethod Method, string? Reference, string? Notes, DateTime PaidAt);
+public record RecordPaymentDto(decimal Amount, PaymentMethod Method, string? Reference, string? Notes);
+public record ReceiveItemDto(Guid ProductId, int Quantity);
+public record ReceiveItemsDto(List<ReceiveItemDto> Items);
+public record SetSupplierInvoiceDto(string InvoiceNumber);
+
+// ─── Sales/Purchase Reports ───────────────────────────────────────────────────
+
+public record MonthlySalesReportDto(int Year, int Month, int OrderCount, decimal SubTotal, decimal Tax, decimal Total, decimal Paid);
+public record CustomerSalesReportDto(Guid CustomerId, string CustomerName, int OrderCount, decimal TotalAmount, decimal PaidAmount);
+public record ProductSalesReportDto(Guid ProductId, string ProductName, int QuantitySold, decimal Revenue);
+public record MonthlyPurchaseReportDto(int Year, int Month, int OrderCount, decimal Total, decimal Paid);
+public record SupplierPurchaseReportDto(Guid SupplierId, string SupplierName, int OrderCount, decimal TotalAmount, decimal PaidAmount);
 
 // ─── Finance ──────────────────────────────────────────────────────────────────
 

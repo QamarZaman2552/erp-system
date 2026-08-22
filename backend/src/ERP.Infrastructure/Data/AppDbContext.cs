@@ -38,6 +38,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<SalesOrderItem> SalesOrderItems => Set<SalesOrderItem>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<PurchaseOrderItem> PurchaseOrderItems => Set<PurchaseOrderItem>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     // Finance
     public DbSet<FinanceCategory> FinanceCategories => Set<FinanceCategory>();
@@ -119,6 +120,7 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
         builder.Entity<PurchaseOrder>().Property(e => e.PaidAmount).HasPrecision(18, 2);
         builder.Entity<PurchaseOrderItem>().Property(e => e.UnitPrice).HasPrecision(18, 2);
         builder.Entity<PurchaseOrderItem>().Property(e => e.TotalPrice).HasPrecision(18, 2);
+        builder.Entity<Payment>().Property(e => e.Amount).HasPrecision(18, 2);
         builder.Entity<FinanceTransaction>().Property(e => e.Amount).HasPrecision(18, 2);
         builder.Entity<Expense>().Property(e => e.Amount).HasPrecision(18, 2);
         builder.Entity<Budget>().Property(e => e.AllocatedAmount).HasPrecision(18, 2);

@@ -69,18 +69,54 @@ public interface ISalesOrderService
 {
     Task<PagedResult<SalesOrderDto>> GetAllAsync(PaginationParams pagination);
     Task<ApiResponse<SalesOrderDto>> GetByIdAsync(Guid id);
+    Task<ApiResponse<SalesOrderDetailDto>> GetDetailAsync(Guid id);
     Task<ApiResponse<SalesOrderDto>> CreateAsync(CreateSalesOrderDto dto);
     Task<ApiResponse<string>> UpdateStatusAsync(Guid id, string status);
     Task<ApiResponse<string>> DeleteAsync(Guid id);
+
+    // Lifecycle
+    Task<ApiResponse<string>> ConfirmAsync(Guid id, string userId);
+    Task<ApiResponse<string>> CancelAsync(Guid id, string userId);
+    Task<ApiResponse<string>> ReturnAsync(Guid id, string userId);
+
+    // Payments
+    Task<ApiResponse<PaymentDto>> RecordPaymentAsync(Guid id, RecordPaymentDto dto, string userId);
+    Task<List<PaymentDto>> GetPaymentsAsync(Guid id);
+
+    // Invoice
+    Task<byte[]> GenerateInvoicePdfAsync(Guid id);
+    Task<ApiResponse<string>> EmailInvoiceAsync(Guid id);
+    Task<int> SendOverdueRemindersAsync();
+
+    // Reports
+    Task<List<MonthlySalesReportDto>> GetMonthlyReportAsync(int year);
+    Task<List<CustomerSalesReportDto>> GetCustomerWiseReportAsync(DateTime? from, DateTime? to);
+    Task<List<ProductSalesReportDto>> GetProductWiseReportAsync(DateTime? from, DateTime? to, int top = 10);
 }
 
 public interface IPurchaseOrderService
 {
     Task<PagedResult<PurchaseOrderDto>> GetAllAsync(PaginationParams pagination);
     Task<ApiResponse<PurchaseOrderDto>> GetByIdAsync(Guid id);
+    Task<ApiResponse<PurchaseOrderDetailDto>> GetDetailAsync(Guid id);
     Task<ApiResponse<PurchaseOrderDto>> CreateAsync(CreatePurchaseOrderDto dto);
     Task<ApiResponse<string>> UpdateStatusAsync(Guid id, string status);
     Task<ApiResponse<string>> DeleteAsync(Guid id);
+
+    // Lifecycle
+    Task<ApiResponse<string>> ConfirmAsync(Guid id, string userId);
+    Task<ApiResponse<string>> CancelAsync(Guid id, string userId);
+    Task<ApiResponse<PurchaseOrderDetailDto>> ReceiveItemsAsync(Guid id, List<ReceiveItemDto> items, string userId);
+    Task<ApiResponse<string>> SetSupplierInvoiceNumberAsync(Guid id, string invoiceNumber);
+
+    // Communications & payments
+    Task<ApiResponse<string>> EmailToSupplierAsync(Guid id);
+    Task<ApiResponse<PaymentDto>> RecordPaymentAsync(Guid id, RecordPaymentDto dto, string userId);
+    Task<List<PaymentDto>> GetPaymentsAsync(Guid id);
+
+    // Reports
+    Task<List<MonthlyPurchaseReportDto>> GetMonthlyReportAsync(int year);
+    Task<List<SupplierPurchaseReportDto>> GetSupplierWiseReportAsync(DateTime? from, DateTime? to);
 }
 
 public interface IFinanceService

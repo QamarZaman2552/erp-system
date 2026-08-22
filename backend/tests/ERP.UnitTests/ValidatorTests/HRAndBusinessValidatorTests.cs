@@ -106,7 +106,7 @@ public class HRAndBusinessValidatorTests
     public void SalesOrder_EmptyItems_IsRejected()
     {
         var dto = new CreateSalesOrderDto(Guid.NewGuid(), DateTime.UtcNow, null,
-            null, []);
+            null, null, []);
         Assert.False(_salesOrder.Validate(dto).IsValid);
     }
 
@@ -114,7 +114,7 @@ public class HRAndBusinessValidatorTests
     public void SalesOrder_ItemWithZeroQuantity_IsRejected()
     {
         var dto = new CreateSalesOrderDto(Guid.NewGuid(), DateTime.UtcNow, null,
-            null, [new SalesOrderItemDto(Guid.NewGuid(), 0, 100m, 0)]);
+            null, null, [new SalesOrderItemDto(Guid.NewGuid(), 0, 100m, 0)]);
         Assert.False(_salesOrder.Validate(dto).IsValid);
     }
 }

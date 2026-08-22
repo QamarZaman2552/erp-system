@@ -23,6 +23,7 @@ import {
   Supplier,
   SalesOrder,
   PurchaseOrder,
+  OrderPayment,
   FinanceTransaction,
   Expense,
   Budget,
@@ -367,6 +368,56 @@ export class ApiService {
     return this.http.post<ApiResponse<SalesOrder>>(`${this.baseUrl}/salesorders`, data);
   }
 
+  confirmSalesOrder(id: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/salesorders/${id}/confirm`, {});
+  }
+
+  cancelSalesOrder(id: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/salesorders/${id}/cancel`, {});
+  }
+
+  returnSalesOrder(id: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/salesorders/${id}/return`, {});
+  }
+
+  recordSalesPayment(id: string, data: { amount: number; method: string; reference?: string; notes?: string }): Observable<ApiResponse<OrderPayment>> {
+    return this.http.post<ApiResponse<OrderPayment>>(`${this.baseUrl}/salesorders/${id}/payments`, data);
+  }
+
+  getSalesPayments(id: string): Observable<OrderPayment[]> {
+    return this.http.get<OrderPayment[]>(`${this.baseUrl}/salesorders/${id}/payments`);
+  }
+
+  emailSalesInvoice(id: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/salesorders/${id}/email-invoice`, {});
+  }
+
+  sendOverdueReminders(): Observable<any> {
+    return this.http.post(`${this.baseUrl}/salesorders/overdue-reminders`, {});
+  }
+
+  salesMonthlyReport(year: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/salesorders/reports/monthly?year=${year}`);
+  }
+
+  salesCustomerReport(from?: string, to?: string): Observable<any[]> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<any[]>(`${this.baseUrl}/salesorders/reports/by-customer`, { params });
+  }
+
+  salesProductReport(from?: string, to?: string): Observable<any[]> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<any[]>(`${this.baseUrl}/salesorders/reports/by-product`, { params });
+  }
+
+  invoicePdfUrl(id: string): string {
+    return `${this.baseUrl}/salesorders/${id}/invoice-pdf`;
+  }
+
   getPurchaseOrders(page = 1, pageSize = 10): Observable<PagedResult<PurchaseOrder>> {
     const params = new HttpParams().set('page', page.toString()).set('pageSize', pageSize.toString());
     return this.http.get<PagedResult<PurchaseOrder>>(`${this.baseUrl}/purchaseorders`, { params });
@@ -374,6 +425,46 @@ export class ApiService {
 
   createPurchaseOrder(data: any): Observable<ApiResponse<PurchaseOrder>> {
     return this.http.post<ApiResponse<PurchaseOrder>>(`${this.baseUrl}/purchaseorders`, data);
+  }
+
+  purchaseOrderDetail(id: string): Observable<ApiResponse<any>> {
+    return this.http.get<ApiResponse<any>>(`${this.baseUrl}/purchaseorders/${id}/detail`);
+  }
+
+  confirmPurchaseOrder(id: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/purchaseorders/${id}/confirm`, {});
+  }
+
+  cancelPurchaseOrder(id: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/purchaseorders/${id}/cancel`, {});
+  }
+
+  receivePurchaseItems(id: string, items: { productId: string; quantity: number }[]): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/purchaseorders/${id}/receive`, items);
+  }
+
+  setSupplierInvoiceNumber(id: string, invoiceNumber: string): Observable<ApiResponse<string>> {
+    return this.http.put<ApiResponse<string>>(`${this.baseUrl}/purchaseorders/${id}/supplier-invoice`, { invoiceNumber });
+  }
+
+  emailPurchaseOrderToSupplier(id: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/purchaseorders/${id}/email-to-supplier`, {});
+  }
+
+  recordPurchasePayment(id: string, data: { amount: number; method: string; reference?: string; notes?: string }): Observable<ApiResponse<OrderPayment>> {
+    return this.http.post<ApiResponse<OrderPayment>>(`${this.baseUrl}/purchaseorders/${id}/payments`, data);
+  }
+
+  getPurchasePayments(id: string): Observable<OrderPayment[]> {
+    return this.http.get<OrderPayment[]>(`${this.baseUrl}/purchaseorders/${id}/payments`);
+  }
+
+  purchaseMonthlyReport(year: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/purchaseorders/reports/monthly?year=${year}`);
+  }
+
+  purchaseSupplierReport(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/purchaseorders/reports/by-supplier`);
   }
 
   // ─── Finance ───────────────────────────────────────────────────────────────
