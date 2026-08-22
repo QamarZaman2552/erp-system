@@ -162,7 +162,18 @@ public record PayrollDto(
     decimal GrossSalary,
     decimal NetSalary,
     PayrollStatus Status,
-    DateTime? PaidAt
+    DateTime? PaidAt,
+    decimal HouseAllowance = 0,
+    decimal TransportAllowance = 0,
+    decimal MedicalAllowance = 0,
+    decimal OvertimePay = 0,
+    double OvertimeHours = 0,
+    decimal TaxDeduction = 0,
+    decimal ProvidentFund = 0,
+    decimal AbsentDeduction = 0,
+    int WorkingDays = 22,
+    int PresentDays = 22,
+    int LeaveDays = 0
 );
 
 public record GeneratePayrollDto(int Month, int Year, List<Guid>? EmployeeIds);

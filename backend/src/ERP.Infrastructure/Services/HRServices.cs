@@ -1031,7 +1031,10 @@ public class PayrollService : IPayrollService
             .Take(pagination.PageSize)
             .Select(p => new PayrollDto(
                 p.Id, p.EmployeeId, $"{p.Employee.FirstName} {p.Employee.LastName}",
-                p.Month, p.Year, p.BasicSalary, p.GrossSalary, p.NetSalary, p.Status, p.PaidAt
+                p.Month, p.Year, p.BasicSalary, p.GrossSalary, p.NetSalary, p.Status, p.PaidAt,
+                p.HouseAllowance, p.TransportAllowance, p.MedicalAllowance,
+                p.OtherAllowances, 0, p.TaxDeduction, p.ProvidentFund,
+                p.OtherDeductions, p.WorkingDays, p.PresentDays, p.LeaveDays
             ))
             .ToListAsync();
 
@@ -1063,7 +1066,10 @@ public class PayrollService : IPayrollService
             .Take(pagination.PageSize)
             .Select(p => new PayrollDto(
                 p.Id, p.EmployeeId, $"{p.Employee.FirstName} {p.Employee.LastName}",
-                p.Month, p.Year, p.BasicSalary, p.GrossSalary, p.NetSalary, p.Status, p.PaidAt
+                p.Month, p.Year, p.BasicSalary, p.GrossSalary, p.NetSalary, p.Status, p.PaidAt,
+                p.HouseAllowance, p.TransportAllowance, p.MedicalAllowance,
+                p.OtherAllowances, 0, p.TaxDeduction, p.ProvidentFund,
+                p.OtherDeductions, p.WorkingDays, p.PresentDays, p.LeaveDays
             ))
             .ToListAsync();
 
@@ -1089,7 +1095,10 @@ public class PayrollService : IPayrollService
             .Take(pagination.PageSize)
             .Select(p => new PayrollDto(
                 p.Id, p.EmployeeId, $"{p.Employee.FirstName} {p.Employee.LastName}",
-                p.Month, p.Year, p.BasicSalary, p.GrossSalary, p.NetSalary, p.Status, p.PaidAt
+                p.Month, p.Year, p.BasicSalary, p.GrossSalary, p.NetSalary, p.Status, p.PaidAt,
+                p.HouseAllowance, p.TransportAllowance, p.MedicalAllowance,
+                p.OtherAllowances, 0, p.TaxDeduction, p.ProvidentFund,
+                p.OtherDeductions, p.WorkingDays, p.PresentDays, p.LeaveDays
             ))
             .ToListAsync();
 
@@ -1113,22 +1122,64 @@ public class PayrollService : IPayrollService
         var employees = await employeesQuery.ToListAsync();
         var resultList = new List<PayrollDto>();
 
+        var monthStart = new DateOnly(dto.Year, dto.Month, 1);
+        var monthEnd = new DateOnly(dto.Year, dto.Month, DateTime.DaysInMonth(dto.Year, dto.Month));
+
+        int workingDays = 0;
+        for (var d = monthStart; d <= monthEnd; d = d.AddDays(1))
+            if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday)
+                workingDays++;
+
         foreach (var emp in employees)
         {
             var existing = await _db.PayrollRecords.FirstOrDefaultAsync(p => p.EmployeeId == emp.Id && p.Month == dto.Month && p.Year == dto.Year);
             if (existing != null)
             {
-                resultList.Add(new PayrollDto(existing.Id, emp.Id, $"{emp.FirstName} {emp.LastName}", existing.Month, existing.Year, existing.BasicSalary, existing.GrossSalary, existing.NetSalary, existing.Status, existing.PaidAt));
+                resultList.Add(ToDto(existing, $"{emp.FirstName} {emp.LastName}"));
                 continue;
             }
+
+            var attRows = await _db.Attendances
+                .AsNoTracking()
+                .Where(a => a.EmployeeId == emp.Id && a.AttendanceDate.Month == dto.Month && a.AttendanceDate.Year == dto.Year)
+                .Select(a => new { a.IsPresent, a.WorkingHours })
+                .ToListAsync();
+
+            var hasTracking = attRows.Count > 0;
+            var presentDays = attRows.Count(a => a.IsPresent);
+            var overtimeHours = attRows.Sum(a => Math.Max(0, (a.WorkingHours ?? 0) - 8));
+
+            var empLeaves = await _db.LeaveRequests
+                .AsNoTracking()
+                .Where(l => l.Status == LeaveStatus.Approved && l.EmployeeId == emp.Id
+                    && l.StartDate <= monthEnd && l.EndDate >= monthStart)
+                .Select(l => new { l.StartDate, l.EndDate })
+                .ToListAsync();
+
+            var leaveDays = 0;
+            foreach (var l in empLeaves)
+            {
+                var from = l.StartDate < monthStart ? monthStart : l.StartDate;
+                var to = l.EndDate > monthEnd ? monthEnd : l.EndDate;
+                for (var d = from; d <= to; d = d.AddDays(1))
+                    if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday)
+                        leaveDays++;
+            }
+
+            var absentDays = hasTracking ? Math.Max(0, workingDays - presentDays - leaveDays) : 0;
+            var perDay = emp.BasicSalary / workingDays;
+            var absentDeduction = Math.Round(perDay * absentDays, 2);
+
+            var hourlyRate = emp.BasicSalary / (workingDays * 8m);
+            var overtimePay = Math.Round((decimal)overtimeHours * hourlyRate * 1.5m, 2);
 
             var house = emp.BasicSalary * 0.20m;
             var transport = emp.BasicSalary * 0.10m;
             var medical = emp.BasicSalary * 0.10m;
-            var gross = emp.BasicSalary + house + transport + medical;
+            var gross = emp.BasicSalary + house + transport + medical + overtimePay;
             var tax = gross * 0.05m;
             var pf = gross * 0.05m;
-            var net = gross - (tax + pf);
+            var net = gross - (tax + pf) - absentDeduction;
 
             var payroll = new PayrollRecord
             {
@@ -1139,23 +1190,39 @@ public class PayrollService : IPayrollService
                 HouseAllowance = house,
                 TransportAllowance = transport,
                 MedicalAllowance = medical,
+                OtherAllowances = overtimePay,
                 GrossSalary = gross,
                 TaxDeduction = tax,
                 ProvidentFund = pf,
+                OtherDeductions = absentDeduction,
                 NetSalary = net,
-                WorkingDays = 22,
-                PresentDays = 22,
+                WorkingDays = workingDays,
+                PresentDays = presentDays,
+                LeaveDays = leaveDays,
                 Status = PayrollStatus.Processed
             };
 
             _db.PayrollRecords.Add(payroll);
             await _db.SaveChangesAsync();
 
-            resultList.Add(new PayrollDto(payroll.Id, emp.Id, $"{emp.FirstName} {emp.LastName}", payroll.Month, payroll.Year, payroll.BasicSalary, payroll.GrossSalary, payroll.NetSalary, payroll.Status, payroll.PaidAt));
+            resultList.Add(new PayrollDto(
+                payroll.Id, payroll.EmployeeId, $"{emp.FirstName} {emp.LastName}",
+                payroll.Month, payroll.Year, payroll.BasicSalary, payroll.GrossSalary, payroll.NetSalary,
+                payroll.Status, payroll.PaidAt,
+                payroll.HouseAllowance, payroll.TransportAllowance, payroll.MedicalAllowance,
+                payroll.OtherAllowances, overtimeHours, payroll.TaxDeduction, payroll.ProvidentFund,
+                payroll.OtherDeductions, payroll.WorkingDays, payroll.PresentDays, payroll.LeaveDays));
         }
 
         return ApiResponse<List<PayrollDto>>.Ok(resultList, "Payroll generated successfully");
     }
+
+    private static PayrollDto ToDto(PayrollRecord p, string name) => new(
+        p.Id, p.EmployeeId, name, p.Month, p.Year, p.BasicSalary, p.GrossSalary, p.NetSalary,
+        p.Status, p.PaidAt,
+        p.HouseAllowance, p.TransportAllowance, p.MedicalAllowance,
+        p.OtherAllowances, 0, p.TaxDeduction, p.ProvidentFund,
+        p.OtherDeductions, p.WorkingDays, p.PresentDays, p.LeaveDays);
 
     public async Task<ApiResponse<string>> MarkAsPaidAsync(Guid id)
     {

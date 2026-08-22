@@ -134,6 +134,17 @@ export interface PayrollRecord {
   netSalary: number;
   status: 'Pending' | 'Processed' | 'Paid' | 'Failed';
   paidAt?: string;
+  houseAllowance?: number;
+  transportAllowance?: number;
+  medicalAllowance?: number;
+  overtimePay?: number;
+  overtimeHours?: number;
+  taxDeduction?: number;
+  providentFund?: number;
+  absentDeduction?: number;
+  workingDays?: number;
+  presentDays?: number;
+  leaveDays?: number;
 }
 
 export interface Customer {
