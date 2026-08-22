@@ -46,14 +46,14 @@ npm test             # 7 tests pass
 | CRM | 4c1278b | lead→customer auto-conversion on Won, stage pipeline + stats, interactions log/history/follow-ups API+UI |
 | Inventory | f417d7d | suppliers/categories APIs, movements history, stock value stats, category report |
 | Sales & Purchase | 75e29a5 | SO/PO lifecycle (confirm→stock deduct/restore, cancel, return+refund), Payment entity (full/partial, auto Partial/Paid status, auto finance Income/Expense txns), PO receive partial/full→inventory auto-add→auto-Delivered, supplier invoice #, invoice PDF (SimplePdfGenerator, no deps) + email w/ attachment, overdue reminders endpoint, sales reports (monthly/customer/product-wise), purchase reports (monthly/supplier-wise), /purchase page + upgraded /sales page w/ actions+reports |
+| Finance Polish | ac17ba2 | transactions date-range+type filter, income/expense/net summary API+KPI cards, approve expense→auto ledger txn + budget SpentAmount update + exceed/80% warning in response, budget alerts endpoint (≥80%), dept-wise + category-wise expense reports, financial report PDF export (annual/quarter/monthly), transactions CSV (Excel) export, payroll generation→auto "Payroll Expense" txn (idempotent ref PAYROLL-YYYY-MM), /finance page: 4 tabs incl Reports tab w/ exports |
 
 ## BAQI Modules (is order me karo)
-1. **Finance & Expense** — ZYADA TAR BANA HAI (transactions/expenses approve/budgets exist; sales/purchase payments ab auto finance mein record hote hain). Add: budget vs actual alerts, date-range filter on transactions, dept/category expense reports.
-2. **Notifications & Email** — SignalR toast + bell exists. Add: notification center (list/read/clear), wire notifications to events (task assigned, leave approved).
-3. **Reports & Analytics** — dashboard KPIs/charts exist. Add: attendance trends, top employees (task counts), lead funnel, inventory valuation.
-4. **Role-Based Permissions** — roles/guards/sidebar hiding already work. Add: Access Denied page component + route.
-5. **Audit Logs** — kuch nahi hai; minimal AuditLog entity + middleware/action-filter (Create/Update/Delete logging) + Admin viewer page. NOTE: ActivityLog entity already exists in BusinessEntities.cs.
-6. **File Upload** — profile image upload endpoint exists; generic document module heavy — user se poochho kitna chahiye. Document entity already exists.
+1. **Notifications & Email** — SignalR toast + bell exists. Add: notification center (list/read/clear), wire notifications to events (task assigned, leave approved).
+2. **Reports & Analytics** — dashboard KPIs/charts exist; finance reports done. Add: attendance trends, top employees (task counts), lead funnel, inventory valuation.
+3. **Role-Based Permissions** — roles/guards/sidebar hiding already work. Add: Access Denied page component + route.
+4. **Audit Logs** — ActivityLog entity exists but kuch use nahi hota; add action-filter (Create/Update/Delete logging) + Admin viewer page.
+5. **File Upload** — profile image upload endpoint exists; Document entity exists; generic document module heavy — user se poochho kitna chahiye.
 
 ## Technical Gotchas (IMPORTANT)
 - **Enums**: global `JsonStringEnumConverter` laga hai (Program.cs) — input/output dono strings ("Active", "High", "Todo"). Numbers bhi bind hote hain.
