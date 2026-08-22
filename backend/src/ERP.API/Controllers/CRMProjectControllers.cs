@@ -105,6 +105,42 @@ public class LeadsController : ControllerBase
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+public class InteractionsController : ControllerBase
+{
+    private readonly IInteractionService _interactionService;
+    private readonly ICurrentUserService _currentUser;
+    public InteractionsController(IInteractionService interactionService, ICurrentUserService currentUser)
+    {
+        _interactionService = interactionService;
+        _currentUser = currentUser;
+    }
+
+    [HttpGet("customer/{customerId:guid}")]
+    public async Task<IActionResult> GetByCustomer(Guid customerId)
+    {
+        var result = await _interactionService.GetByCustomerAsync(customerId);
+        return Ok(result);
+    }
+
+    [HttpGet("follow-ups")]
+    public async Task<IActionResult> GetDueFollowUps()
+    {
+        var result = await _interactionService.GetDueFollowUpsAsync();
+        return Ok(result);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create([FromBody] CreateInteractionDto dto)
+    {
+        var res = await _interactionService.CreateAsync(dto, _currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
 public class ProjectsController : ControllerBase
 {
     private readonly IProjectService _projectService;

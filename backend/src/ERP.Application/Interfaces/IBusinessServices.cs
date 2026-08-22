@@ -87,3 +87,10 @@ public interface IDashboardService
     Task<List<TopProductDto>> GetTopProductsAsync(int count = 5);
     Task<List<RecentActivityDto>> GetRecentActivitiesAsync(int count = 10);
 }
+
+public interface IInteractionService
+{
+    Task<List<InteractionDto>> GetByCustomerAsync(Guid customerId);
+    Task<List<InteractionDto>> GetDueFollowUpsAsync();
+    Task<ApiResponse<InteractionDto>> CreateAsync(CreateInteractionDto dto, string userId);
+}

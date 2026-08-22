@@ -247,6 +247,34 @@ export class ApiService {
     return this.http.post<ApiResponse<Customer>>(`${this.baseUrl}/customers`, data);
   }
 
+  updateCustomer(id: string, data: any): Observable<ApiResponse<Customer>> {
+    return this.http.put<ApiResponse<Customer>>(`${this.baseUrl}/customers/${id}`, data);
+  }
+
+  deleteCustomer(id: string): Observable<ApiResponse<string>> {
+    return this.http.delete<ApiResponse<string>>(`${this.baseUrl}/customers/${id}`);
+  }
+
+  updateLead(id: string, data: any): Observable<ApiResponse<Lead>> {
+    return this.http.put<ApiResponse<Lead>>(`${this.baseUrl}/leads/${id}`, data);
+  }
+
+  deleteLead(id: string): Observable<ApiResponse<string>> {
+    return this.http.delete<ApiResponse<string>>(`${this.baseUrl}/leads/${id}`);
+  }
+
+  getInteractions(customerId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/interactions/customer/${customerId}`);
+  }
+
+  getDueFollowUps(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/interactions/follow-ups`);
+  }
+
+  logInteraction(data: { customerId: string; type: string; subject: string; notes?: string; followUpDate?: string }): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/interactions`, data);
+  }
+
   getLeads(page = 1, pageSize = 10): Observable<PagedResult<Lead>> {
     const params = new HttpParams().set('page', page.toString()).set('pageSize', pageSize.toString());
     return this.http.get<PagedResult<Lead>>(`${this.baseUrl}/leads`, { params });

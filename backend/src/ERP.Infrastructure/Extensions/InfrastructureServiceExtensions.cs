@@ -55,8 +55,9 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IPayrollService, PayrollService>();
 
         // Business Services
-        services.AddScoped<ICustomerService, CustomerService>();
-        services.AddScoped<ILeadService, LeadService>();
+services.AddScoped<ICustomerService, CustomerService>();
+services.AddScoped<ILeadService, LeadService>();
+services.AddScoped<IInteractionService, InteractionService>();
         services.AddScoped<IProjectService, ProjectService>();
         services.AddScoped<ITaskService, TaskService>();
         services.AddScoped<IProductService, ProductService>();

@@ -26,7 +26,7 @@ public class CustomerService : ICustomerService
         var items = await query.OrderByDescending(c => c.CreatedAt)
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .Select(c => new CustomerDto(c.Id, c.Name, c.Email, c.Phone, c.Company, c.City, c.Country, c.TotalPurchaseValue, c.IsActive))
+            .Select(c => new CustomerDto(c.Id, c.Name, c.Email, c.Phone, c.Company, c.City, c.Country, c.TotalPurchaseValue, c.IsActive, c.Address, c.Website, c.Notes))
             .ToListAsync();
 
         return new PagedResult<CustomerDto> { Items = items, TotalCount = total, Page = pagination.Page, PageSize = pagination.PageSize };
@@ -104,7 +104,7 @@ public class LeadService : ILeadService
         var items = await query.OrderByDescending(l => l.CreatedAt)
             .Skip((pagination.Page - 1) * pagination.PageSize)
             .Take(pagination.PageSize)
-            .Select(l => new LeadDto(l.Id, l.Title, l.ContactName, l.Company, l.Status, l.EstimatedValue, l.ExpectedCloseDate, l.AssignedToId))
+            .Select(l => new LeadDto(l.Id, l.Title, l.ContactName, l.Company, l.Status, l.EstimatedValue, l.ExpectedCloseDate, l.AssignedToId, l.Source, l.ContactEmail, l.ContactPhone))
             .ToListAsync();
 
         return new PagedResult<LeadDto> { Items = items, TotalCount = total, Page = pagination.Page, PageSize = pagination.PageSize };
@@ -144,6 +144,7 @@ public class LeadService : ILeadService
         var l = await _db.Leads.FindAsync(id);
         if (l == null) return ApiResponse<LeadDto>.Fail("Lead not found");
 
+        var wasWon = l.Status == LeadStatus.Won;
         l.Title = dto.Title;
         l.ContactName = dto.ContactName;
         l.ContactEmail = dto.ContactEmail;
@@ -155,8 +156,45 @@ public class LeadService : ILeadService
         l.Notes = dto.Notes;
         l.UpdatedAt = DateTime.UtcNow;
 
+        string message = "Lead updated";
+        if (dto.Status == LeadStatus.Won && !wasWon)
+        {
+            var customer = await ConvertLeadToCustomerAsync(l);
+            message = $"Lead won! Converted to customer '{customer.Name}'";
+        }
+
         await _db.SaveChangesAsync();
-        return ApiResponse<LeadDto>.Ok(new LeadDto(l.Id, l.Title, l.ContactName, l.Company, l.Status, l.EstimatedValue, l.ExpectedCloseDate, l.AssignedToId), "Lead updated");
+        return ApiResponse<LeadDto>.Ok(new LeadDto(l.Id, l.Title, l.ContactName, l.Company, l.Status, l.EstimatedValue, l.ExpectedCloseDate, l.AssignedToId,
+            l.Source, l.ContactEmail, l.ContactPhone), message);
+    }
+
+    private async Task<Customer> ConvertLeadToCustomerAsync(Lead lead)
+    {
+        Customer? customer = null;
+
+        if (!string.IsNullOrWhiteSpace(lead.Company))
+            customer = await _db.Customers.FirstOrDefaultAsync(c => c.Company == lead.Company || c.Name == lead.Company);
+
+        if (customer == null && !string.IsNullOrWhiteSpace(lead.ContactEmail))
+            customer = await _db.Customers.FirstOrDefaultAsync(c => c.Email == lead.ContactEmail);
+
+        if (customer == null)
+        {
+            customer = new Customer
+            {
+                Name = !string.IsNullOrWhiteSpace(lead.Company) ? lead.Company : (lead.ContactName ?? "New Client"),
+                Email = lead.ContactEmail,
+                Phone = lead.ContactPhone,
+                Company = lead.Company,
+                TotalPurchaseValue = 0,
+                Notes = $"Converted from lead '{lead.Title}'"
+            };
+            _db.Customers.Add(customer);
+        }
+
+        customer.TotalPurchaseValue += lead.EstimatedValue;
+        lead.CustomerId = customer.Id;
+        return customer;
     }
 
     public async Task<ApiResponse<string>> DeleteAsync(Guid id)
@@ -902,5 +940,60 @@ public class DashboardService : IDashboardService
         }
 
         return activities.OrderByDescending(a => a.Timestamp).Take(count).ToList();
+    }
+}
+
+public class InteractionService : IInteractionService
+{
+    private readonly AppDbContext _db;
+    public InteractionService(AppDbContext db) => _db = db;
+
+    public async Task<List<InteractionDto>> GetByCustomerAsync(Guid customerId)
+    {
+        return await _db.Interactions
+            .AsNoTracking()
+            .Where(i => i.CustomerId == customerId && !i.IsDeleted)
+            .OrderByDescending(i => i.InteractionDate)
+            .Select(i => new InteractionDto(
+                i.Id, i.CustomerId, i.Customer.Name, i.Type,
+                i.Subject, i.Notes, i.InteractionDate, i.FollowUpDate))
+            .ToListAsync();
+    }
+
+    public async Task<List<InteractionDto>> GetDueFollowUpsAsync()
+    {
+        var today = DateTime.UtcNow.Date;
+        return await _db.Interactions
+            .AsNoTracking()
+            .Where(i => !i.IsDeleted && i.FollowUpDate != null && i.FollowUpDate <= today.AddDays(7))
+            .OrderBy(i => i.FollowUpDate)
+            .Select(i => new InteractionDto(
+                i.Id, i.CustomerId, i.Customer.Name, i.Type,
+                i.Subject, i.Notes, i.InteractionDate, i.FollowUpDate))
+            .ToListAsync();
+    }
+
+    public async Task<ApiResponse<InteractionDto>> CreateAsync(CreateInteractionDto dto, string userId)
+    {
+        var customer = await _db.Customers.FindAsync(dto.CustomerId);
+        if (customer == null) return ApiResponse<InteractionDto>.Fail("Customer not found");
+
+        var interaction = new Interaction
+        {
+            CustomerId = dto.CustomerId,
+            Type = dto.Type,
+            Subject = dto.Subject,
+            Notes = dto.Notes,
+            InteractionDate = dto.InteractionDate == default ? DateTime.UtcNow : dto.InteractionDate,
+            FollowUpDate = dto.FollowUpDate,
+            CreatedByUserId = userId
+        };
+        _db.Interactions.Add(interaction);
+        await _db.SaveChangesAsync();
+
+        return ApiResponse<InteractionDto>.Ok(new InteractionDto(
+            interaction.Id, interaction.CustomerId, customer.Name, interaction.Type,
+            interaction.Subject, interaction.Notes, interaction.InteractionDate, interaction.FollowUpDate
+        ), "Interaction logged");
     }
 }

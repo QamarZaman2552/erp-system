@@ -6,7 +6,8 @@ namespace ERP.Application.DTOs.Business;
 
 public record CustomerDto(
     Guid Id, string Name, string? Email, string? Phone, string? Company,
-    string? City, string? Country, decimal TotalPurchaseValue, bool IsActive
+    string? City, string? Country, decimal TotalPurchaseValue, bool IsActive,
+    string? Address = null, string? Website = null, string? Notes = null
 );
 public record CreateCustomerDto(string Name, string? Email, string? Phone, string? Company,
     string? Address, string? City, string? Country, string? Website, string? Notes);
@@ -14,7 +15,8 @@ public record UpdateCustomerDto(string Name, string? Email, string? Phone, strin
     string? Address, string? City, string? Country, string? Website, string? Notes, bool IsActive);
 
 public record LeadDto(Guid Id, string Title, string? ContactName, string? Company,
-    LeadStatus Status, decimal EstimatedValue, DateTime? ExpectedCloseDate, string? AssignedToId);
+    LeadStatus Status, decimal EstimatedValue, DateTime? ExpectedCloseDate, string? AssignedToId,
+    string? Source = null, string? ContactEmail = null, string? ContactPhone = null);
 public record CreateLeadDto(string Title, string? ContactName, string? ContactEmail, string? ContactPhone,
     string? Company, string? Source, decimal EstimatedValue, DateTime? ExpectedCloseDate, Guid? CustomerId, string? Notes);
 public record UpdateLeadDto(string Title, string? ContactName, string? ContactEmail, string? ContactPhone,

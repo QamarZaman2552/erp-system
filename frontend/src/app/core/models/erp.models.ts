@@ -163,11 +163,14 @@ export interface Lead {
   id: string;
   title: string;
   contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
   company?: string;
   status: 'New' | 'Contacted' | 'Qualified' | 'Proposal' | 'Negotiation' | 'Won' | 'Lost';
   estimatedValue: number;
   expectedCloseDate?: string;
   assignedToId?: string;
+  source?: string;
 }
 
 export interface Project {

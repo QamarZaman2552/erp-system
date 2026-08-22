@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
+import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Customer, Lead } from '../../core/models/erp.models';
 
@@ -30,6 +31,57 @@ import { Customer, Lead } from '../../core/models/erp.models';
 
     <!-- Customers View -->
     <div *ngIf="activeTab === 'customers'">
+      <!-- Interaction Panel -->
+      <div class="erp-card p-3 mb-3">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Customer</label>
+            <select [(ngModel)]="selectedCustomerId" (change)="loadInteractions()" class="form-select form-select-sm">
+              <option [ngValue]="null" disabled>Select customer…</option>
+              <option *ngFor="let c of customers()" [ngValue]="c.id">{{ c.name }}</option>
+            </select>
+          </div>
+        </div>
+        <div *ngIf="selectedCustomerId" class="mt-3">
+          <form class="row g-2 align-items-end" (ngSubmit)="saveInteraction()">
+            <div class="col-md-2">
+              <label class="form-label small mb-1">Type</label>
+              <select [(ngModel)]="newInteraction.type" name="itype" class="form-select form-select-sm">
+                <option>Call</option><option>Email</option><option>Meeting</option><option>Note</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small mb-1">Subject *</label>
+              <input type="text" [(ngModel)]="newInteraction.subject" name="isub" required class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label small mb-1">Notes</label>
+              <input type="text" [(ngModel)]="newInteraction.notes" name="inotes" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-2">
+              <label class="form-label small mb-1">Follow-up</label>
+              <input type="date" [(ngModel)]="newInteraction.followUpDate" name="ifup" class="form-control form-control-sm" />
+            </div>
+            <div class="col-md-1">
+              <button type="submit" class="btn btn-sm btn-primary w-100">Log</button>
+            </div>
+          </form>
+          <table class="table table-sm table-hover align-middle mb-0 mt-3" *ngIf="interactions().length > 0; else noInts">
+            <thead><tr class="small text-secondary"><th>Date</th><th>Type</th><th>Subject</th><th>Follow-up</th></tr></thead>
+            <tbody>
+              <tr *ngFor="let i of interactions()">
+                <td class="small">{{ i.interactionDate | date:'MMM d, y' }}</td>
+                <td><span class="badge badge-info small">{{ i.type }}</span></td>
+                <td class="small fw-semibold">{{ i.subject }}<div class="text-xs text-gray-400">{{ i.notes }}</div></td>
+                <td class="small" *ngIf="i.followUpDate"><span class="badge badge-warning">🔔 {{ i.followUpDate | date:'MMM d' }}</span></td>
+                <td *ngIf="!i.followUpDate">—</td>
+              </tr>
+            </tbody>
+          </table>
+          <ng-template #noInts><p class="text-xs text-gray-400 mt-2 mb-0">No interactions logged yet.</p></ng-template>
+        </div>
+      </div>
+
       <div class="erp-table-container">
         <table class="erp-table">
           <thead>
@@ -40,6 +92,7 @@ import { Customer, Lead } from '../../core/models/erp.models';
               <th>Location</th>
               <th>Total Purchases</th>
               <th>Status</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -56,6 +109,10 @@ import { Customer, Lead } from '../../core/models/erp.models';
                 <span class="badge badge-success" *ngIf="c.isActive">Active</span>
                 <span class="badge badge-neutral" *ngIf="!c.isActive">Inactive</span>
               </td>
+              <td>
+                <button class="btn btn-sm btn-outline-primary py-0 px-1 me-1" title="Edit" (click)="editCustomer(c)">✏️</button>
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Archive" (click)="archiveCustomer(c)">🗑️</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -64,6 +121,18 @@ import { Customer, Lead } from '../../core/models/erp.models';
 
     <!-- Leads Pipeline View -->
     <div *ngIf="activeTab === 'leads'">
+      <!-- Pipeline Stats -->
+      <div class="row g-3 mb-3">
+        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">{{ stageCount('New') }}</div><div class="metric-title small">New</div></div></div>
+        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Contacted') }}</div><div class="metric-title small">Contacted</div></div></div>
+        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Qualified') }}</div><div class="metric-title small">Qualified</div></div></div>
+        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Proposal') + stageCount('Negotiation') }}</div><div class="metric-title small">Proposal/Neg.</div></div></div>
+        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0 text-success">{{ stageCount('Won') }}</div><div class="metric-title small">Won</div></div></div>
+        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0 text-danger">{{ stageCount('Lost') }}</div><div class="metric-title small">Lost</div></div></div>
+        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0 text-info">{{ conversionRate() }}%</div><div class="metric-title small">Conversion</div></div></div>
+        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">\${{ pipelineValue() | number:'1.0-0' }}</div><div class="metric-title small">Open Pipeline</div></div></div>
+      </div>
+
       <div class="erp-table-container">
         <table class="erp-table">
           <thead>
@@ -71,17 +140,28 @@ import { Customer, Lead } from '../../core/models/erp.models';
               <th>Deal Opportunity</th>
               <th>Contact Person</th>
               <th>Company</th>
+              <th>Source</th>
               <th>Estimated Value</th>
-              <th>Stage</th>
+              <th style="width: 150px;">Stage</th>
+              <th *ngIf="canManage()">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let l of leads()">
               <td class="font-semibold">{{ l.title }}</td>
-              <td>{{ l.contactName || '—' }}</td>
+              <td>{{ l.contactName || '—' }}<div class="text-xs text-gray-400">{{ l.contactEmail }}</div></td>
               <td>{{ l.company || '—' }}</td>
+              <td><span class="badge badge-neutral">{{ l.source || '—' }}</span></td>
               <td class="font-semibold text-indigo-400">\${{ l.estimatedValue | number:'1.2-2' }}</td>
-              <td><span class="badge badge-info">{{ l.status }}</span></td>
+              <td>
+                <select class="form-select form-select-sm" [value]="l.status" (change)="changeStage(l, $any($event.target).value)">
+                  <option>New</option><option>Contacted</option><option>Qualified</option>
+                  <option>Proposal</option><option>Negotiation</option><option>Won</option><option>Lost</option>
+                </select>
+              </td>
+              <td *ngIf="canManage()">
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete lead" (click)="deleteLead(l)">✕</button>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -93,7 +173,7 @@ import { Customer, Lead } from '../../core/models/erp.models';
       <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
           <div class="modal-header">
-            <h5 class="modal-title">Add New Client Account</h5>
+            <h5 class="modal-title">{{ editingCustomerId ? 'Edit Client Account' : 'Add New Client Account' }}</h5>
             <button type="button" class="btn-close btn-close-white" (click)="showCustomerModal.set(false)"></button>
           </div>
           <form (ngSubmit)="saveCustomer()">
@@ -219,6 +299,16 @@ export class CrmComponent implements OnInit {
   leads = signal<Lead[]>([]);
   showCustomerModal = signal(false);
   showLeadModal = signal(false);
+  editingCustomerId: string | null = null;
+
+  selectedCustomerId: string | null = null;
+  interactions = signal<any[]>([]);
+  newInteraction = { type: 'Call', subject: '', notes: '', followUpDate: '' };
+
+  private auth = inject(AuthService);
+  canManage(): boolean {
+    return this.auth.hasRole(['Admin', 'Manager']);
+  }
 
   newCust = {
     name: '',
@@ -267,6 +357,7 @@ export class CrmComponent implements OnInit {
 
   openCreateModal(): void {
     if (this.activeTab === 'customers') {
+      this.editingCustomerId = null;
       this.newCust = { name: '', company: '', email: '', phone: '', address: '', city: '', country: 'USA', website: '', notes: '' };
       this.showCustomerModal.set(true);
     } else {
@@ -291,11 +382,132 @@ export class CrmComponent implements OnInit {
       return;
     }
     if (!this.newCust.city) this.newCust.city = 'Unknown';
+
+    if (this.editingCustomerId) {
+      this.api.updateCustomer(this.editingCustomerId, { ...this.newCust, isActive: true }).subscribe({
+        next: () => {
+          this.showCustomerModal.set(false);
+          this.loadData();
+          this.notify('CRM', 'Customer updated successfully!', 'success');
+        },
+        error: (err) => this.notify('CRM', this.extractError(err), 'error')
+      });
+      return;
+    }
+
     this.api.createCustomer(this.newCust).subscribe({
       next: () => {
         this.showCustomerModal.set(false);
         this.loadData();
         this.notify('CRM', 'Customer saved successfully!', 'success');
+      },
+      error: (err) => this.notify('CRM', this.extractError(err), 'error')
+    });
+  }
+
+  editCustomer(c: Customer): void {
+    this.editingCustomerId = c.id;
+    this.newCust = {
+      name: c.name,
+      company: c.company || '',
+      email: c.email || '',
+      phone: c.phone || '',
+      address: '',
+      city: c.city || '',
+      country: c.country || '',
+      website: '',
+      notes: ''
+    };
+    this.showCustomerModal.set(true);
+  }
+
+  archiveCustomer(c: Customer): void {
+    if (!confirm(`Archive customer "${c.name}"?`)) return;
+    this.api.deleteCustomer(c.id).subscribe({
+      next: () => {
+        this.loadData();
+        this.notify('CRM', `"${c.name}" archived.`, 'success');
+      },
+      error: (err) => this.notify('CRM', this.extractError(err), 'error')
+    });
+  }
+
+  changeStage(l: Lead, newStatus: string): void {
+    const notes = newStatus === 'Lost' ? prompt(`Loss reason for "${l.title}" (required):`) || '' : l.status === undefined ? '' : undefined;
+    if (newStatus === 'Lost' && !notes) {
+      this.notify('CRM', 'Loss reason is required.', 'warning');
+      this.loadData();
+      return;
+    }
+    const payload: any = {
+      title: l.title,
+      contactName: l.contactName || null,
+      contactEmail: l.contactEmail || null,
+      contactPhone: l.contactPhone || null,
+      company: l.company || null,
+      status: newStatus,
+      estimatedValue: l.estimatedValue,
+      expectedCloseDate: l.expectedCloseDate || null,
+      notes: notes ?? undefined
+    };
+    this.api.updateLead(l.id, payload).subscribe({
+      next: (res) => {
+        this.notify('CRM', res?.message || `Lead moved to ${newStatus}.`, 'success');
+        this.loadData();
+      },
+      error: (err) => {
+        this.notify('CRM', this.extractError(err), 'error');
+        this.loadData();
+      }
+    });
+  }
+
+  deleteLead(l: Lead): void {
+    if (!confirm(`Delete lead "${l.title}"?`)) return;
+    this.api.deleteLead(l.id).subscribe({
+      next: () => { this.loadData(); this.notify('CRM', 'Lead deleted.', 'success'); }
+    });
+  }
+
+  stageCount(stage: string): number {
+    return this.leads().filter(l => l.status === stage).length;
+  }
+
+  conversionRate(): number {
+    const closed = this.leads().filter(l => l.status === 'Won' || l.status === 'Lost').length;
+    if (closed === 0) return 0;
+    return Math.round((this.stageCount('Won') / closed) * 100);
+  }
+
+  pipelineValue(): number {
+    return this.leads()
+      .filter(l => !['Won', 'Lost'].includes(l.status))
+      .reduce((s, l) => s + (l.estimatedValue || 0), 0);
+  }
+
+  loadInteractions(): void {
+    if (!this.selectedCustomerId) { this.interactions.set([]); return; }
+    this.api.getInteractions(this.selectedCustomerId).subscribe({
+      next: (res) => this.interactions.set(res || [])
+    });
+  }
+
+  saveInteraction(): void {
+    if (!this.selectedCustomerId || !this.newInteraction.subject) {
+      this.notify('CRM', 'Select a customer and enter a subject.', 'warning');
+      return;
+    }
+    this.api.logInteraction({
+      customerId: this.selectedCustomerId,
+      type: this.newInteraction.type,
+      subject: this.newInteraction.subject,
+      notes: this.newInteraction.notes || undefined,
+      followUpDate: this.newInteraction.followUpDate || undefined
+    }).subscribe({
+      next: () => {
+        this.newInteraction = { type: 'Call', subject: '', notes: '', followUpDate: '' };
+        this.loadInteractions();
+        this.notify('CRM', 'Interaction logged!', 'success');
       },
       error: (err) => this.notify('CRM', this.extractError(err), 'error')
     });
