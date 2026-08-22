@@ -210,6 +210,17 @@ export interface TeamMember {
   activeTaskCount: number;
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  contactPerson?: string;
+  email?: string;
+  phone?: string;
+  country?: string;
+  totalPurchaseValue: number;
+  isActive: boolean;
+}
+
 export interface Product {
   id: string;
   code: string;

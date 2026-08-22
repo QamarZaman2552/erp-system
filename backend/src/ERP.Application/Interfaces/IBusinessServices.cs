@@ -49,6 +49,20 @@ public interface IProductService
     Task<ApiResponse<string>> DeleteAsync(Guid id);
     Task<ApiResponse<string>> AdjustStockAsync(StockAdjustmentDto dto);
     Task<List<ProductDto>> GetLowStockAsync();
+    Task<List<StockMovementDto>> GetMovementsAsync(Guid productId);
+}
+
+public interface ISupplierService
+{
+    Task<List<SupplierDto>> GetAllAsync();
+    Task<ApiResponse<SupplierDto>> CreateAsync(CreateSupplierDto dto);
+    Task<ApiResponse<SupplierDto>> UpdateAsync(Guid id, CreateSupplierDto dto);
+}
+
+public interface IProductCategoryService
+{
+    Task<List<ProductCategoryDto>> GetAllAsync();
+    Task<ApiResponse<ProductCategoryDto>> CreateAsync(CreateProductCategoryDto dto);
 }
 
 public interface ISalesOrderService

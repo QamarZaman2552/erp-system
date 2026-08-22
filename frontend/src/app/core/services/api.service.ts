@@ -20,6 +20,7 @@ import {
   ProjectTask,
   TeamMember,
   Product,
+  Supplier,
   SalesOrder,
   PurchaseOrder,
   FinanceTransaction,
@@ -336,8 +337,24 @@ export class ApiService {
     return this.http.post<ApiResponse<Product>>(`${this.baseUrl}/products`, data);
   }
 
-  adjustStock(data: { productId: string; quantity: number; type: number; notes?: string }): Observable<ApiResponse<string>> {
+  adjustStock(data: { productId: string; quantity: number; type: string; notes?: string }): Observable<ApiResponse<string>> {
     return this.http.post<ApiResponse<string>>(`${this.baseUrl}/products/adjust-stock`, data);
+  }
+
+  getProductMovements(productId: string): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/products/${productId}/movements`);
+  }
+
+  getSuppliers(): Observable<Supplier[]> {
+    return this.http.get<Supplier[]>(`${this.baseUrl}/suppliers`);
+  }
+
+  createSupplier(data: any): Observable<ApiResponse<Supplier>> {
+    return this.http.post<ApiResponse<Supplier>>(`${this.baseUrl}/suppliers`, data);
+  }
+
+  getCategories(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/categories`);
   }
 
   // ─── Sales & Purchase ──────────────────────────────────────────────────────

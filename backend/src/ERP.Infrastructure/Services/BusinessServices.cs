@@ -555,6 +555,95 @@ public class ProductService : IProductService
             .Select(p => new ProductDto(p.Id, p.Code, p.Name, p.Description, p.Category.Name, p.Supplier != null ? p.Supplier.Name : null, p.CostPrice, p.SellingPrice, p.CurrentStock, p.MinimumStock, p.IsActive))
             .ToListAsync();
     }
+
+    public async Task<List<StockMovementDto>> GetMovementsAsync(Guid productId)
+    {
+        return await _db.StockMovements
+            .AsNoTracking()
+            .Where(m => m.ProductId == productId)
+            .OrderByDescending(m => m.CreatedAt)
+            .Select(m => new StockMovementDto(
+                m.Id, m.Type, m.Quantity, m.PreviousStock, m.NewStock,
+                m.Reference, m.Notes, m.CreatedAt))
+            .ToListAsync();
+    }
+}
+
+public class SupplierService : ISupplierService
+{
+    private readonly AppDbContext _db;
+    public SupplierService(AppDbContext db) => _db = db;
+
+    public async Task<List<SupplierDto>> GetAllAsync()
+    {
+        return await _db.Suppliers.AsNoTracking()
+            .OrderBy(s => s.Name)
+            .Select(s => new SupplierDto(s.Id, s.Name, s.ContactPerson, s.Email, s.Phone, s.Country, s.TotalPurchaseValue, s.IsActive))
+            .ToListAsync();
+    }
+
+    public async Task<ApiResponse<SupplierDto>> CreateAsync(CreateSupplierDto dto)
+    {
+        var supplier = new Supplier
+        {
+            Name = dto.Name,
+            ContactPerson = dto.ContactPerson,
+            Email = dto.Email,
+            Phone = dto.Phone,
+            Address = dto.Address,
+            Country = dto.Country
+        };
+        _db.Suppliers.Add(supplier);
+        await _db.SaveChangesAsync();
+
+        return ApiResponse<SupplierDto>.Ok(new SupplierDto(
+            supplier.Id, supplier.Name, supplier.ContactPerson, supplier.Email,
+            supplier.Phone, supplier.Country, 0, true), "Supplier created");
+    }
+
+    public async Task<ApiResponse<SupplierDto>> UpdateAsync(Guid id, CreateSupplierDto dto)
+    {
+        var s = await _db.Suppliers.FindAsync(id);
+        if (s == null) return ApiResponse<SupplierDto>.Fail("Supplier not found");
+
+        s.Name = dto.Name;
+        s.ContactPerson = dto.ContactPerson;
+        s.Email = dto.Email;
+        s.Phone = dto.Phone;
+        s.Address = dto.Address;
+        s.Country = dto.Country;
+        await _db.SaveChangesAsync();
+
+        return ApiResponse<SupplierDto>.Ok(new SupplierDto(
+            s.Id, s.Name, s.ContactPerson, s.Email, s.Phone, s.Country, s.TotalPurchaseValue, s.IsActive), "Supplier updated");
+    }
+}
+
+public class ProductCategoryService : IProductCategoryService
+{
+    private readonly AppDbContext _db;
+    public ProductCategoryService(AppDbContext db) => _db = db;
+
+    public async Task<List<ProductCategoryDto>> GetAllAsync()
+    {
+        return await _db.ProductCategories.AsNoTracking()
+            .OrderBy(c => c.Name)
+            .Select(c => new ProductCategoryDto(
+                c.Id, c.Name, c.Description,
+                _db.Products.Count(p => p.CategoryId == c.Id),
+                c.IsActive))
+            .ToListAsync();
+    }
+
+    public async Task<ApiResponse<ProductCategoryDto>> CreateAsync(CreateProductCategoryDto dto)
+    {
+        var category = new ProductCategory { Name = dto.Name, Description = dto.Description };
+        _db.ProductCategories.Add(category);
+        await _db.SaveChangesAsync();
+
+        return ApiResponse<ProductCategoryDto>.Ok(new ProductCategoryDto(
+            category.Id, category.Name, category.Description, 0, true), "Category created");
+    }
 }
 
 public class SalesOrderService : ISalesOrderService

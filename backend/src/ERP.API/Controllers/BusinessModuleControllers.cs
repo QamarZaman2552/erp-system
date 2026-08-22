@@ -62,6 +62,13 @@ public class ProductsController : ControllerBase
         return Ok(res);
     }
 
+    [HttpGet("{id:guid}/movements")]
+    public async Task<IActionResult> GetMovements(Guid id)
+    {
+        var result = await _productService.GetMovementsAsync(id);
+        return Ok(result);
+    }
+
     [HttpDelete("{id:guid}")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> Delete(Guid id)
@@ -267,5 +274,64 @@ public class DashboardController : ControllerBase
     {
         var list = await _dashboardService.GetRecentActivitiesAsync();
         return Ok(list);
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class SuppliersController : ControllerBase
+{
+    private readonly ISupplierService _supplierService;
+    public SuppliersController(ISupplierService supplierService) => _supplierService = supplierService;
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _supplierService.GetAllAsync();
+        return Ok(result);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> Create([FromBody] CreateSupplierDto dto)
+    {
+        var res = await _supplierService.CreateAsync(dto);
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> Update(Guid id, [FromBody] CreateSupplierDto dto)
+    {
+        var res = await _supplierService.UpdateAsync(id, dto);
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class CategoriesController : ControllerBase
+{
+    private readonly IProductCategoryService _categoryService;
+    public CategoriesController(IProductCategoryService categoryService) => _categoryService = categoryService;
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll()
+    {
+        var result = await _categoryService.GetAllAsync();
+        return Ok(result);
+    }
+
+    [HttpPost]
+    [Authorize(Roles = "Admin,Manager")]
+    public async Task<IActionResult> Create([FromBody] CreateProductCategoryDto dto)
+    {
+        var res = await _categoryService.CreateAsync(dto);
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
     }
 }

@@ -61,6 +61,9 @@ public record UpdateProductDto(string Name, string? Description, Guid CategoryId
 
 public record StockAdjustmentDto(Guid ProductId, int Quantity, StockMovementType Type, string? Notes);
 
+public record StockMovementDto(Guid Id, StockMovementType Type, int Quantity,
+    int PreviousStock, int NewStock, string? Reference, string? Notes, DateTime CreatedAt);
+
 public record SupplierDto(Guid Id, string Name, string? ContactPerson, string? Email, string? Phone,
     string? Country, decimal TotalPurchaseValue, bool IsActive);
 public record CreateSupplierDto(string Name, string? ContactPerson, string? Email, string? Phone,
