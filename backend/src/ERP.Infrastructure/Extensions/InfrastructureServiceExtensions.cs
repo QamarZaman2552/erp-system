@@ -67,6 +67,7 @@ services.AddScoped<IProductCategoryService, ProductCategoryService>();
         services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
         services.AddScoped<IFinanceService, FinanceService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         return services;
     }

@@ -144,6 +144,12 @@ public record CategoryExpenseReportDto(string Category, int Count, decimal Amoun
 public record BudgetAlertDto(Guid Id, string Name, string Department, decimal AllocatedAmount,
     decimal SpentAmount, decimal Remaining, double PercentUsed, string AlertLevel);
 
+// ─── Notifications ────────────────────────────────────────────────────────────
+
+public record NotificationDto(Guid Id, string Title, string Message, string Type, bool IsRead,
+    string? ActionUrl, DateTime CreatedAt);
+public record CreateAnnouncementDto(string Title, string Message);
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 public record DashboardStatsDto(

@@ -287,7 +287,12 @@ public class ProjectService : IProjectService
 public class TaskService : ITaskService
 {
     private readonly AppDbContext _db;
-    public TaskService(AppDbContext db) => _db = db;
+    private readonly INotificationService _notifications;
+    public TaskService(AppDbContext db, INotificationService notificationService)
+    {
+        _db = db;
+        _notifications = notificationService;
+    }
 
     public async Task<PagedResult<TaskDto>> GetByProjectAsync(Guid projectId, PaginationParams pagination)
     {
@@ -374,6 +379,22 @@ public class TaskService : ITaskService
                 _db.TaskAssignments.Add(new TaskAssignment { TaskId = task.Id, EmployeeId = empId });
             }
             await _db.SaveChangesAsync();
+
+            // Notify each assignee's linked user account
+            var projName = await _db.Projects.Where(p => p.Id == dto.ProjectId).Select(p => p.Name).FirstOrDefaultAsync() ?? "Project";
+            foreach (var empId in dto.AssigneeIds.Distinct())
+            {
+                var assignee = await _db.Employees
+                    .Where(e => e.Id == empId)
+                    .Select(e => new { e.FirstName, e.LastName, e.ApplicationUserId })
+                    .FirstOrDefaultAsync();
+                if (assignee?.ApplicationUserId != null)
+                    await _notifications.CreateAsync(assignee.ApplicationUserId,
+                        "New Task Assigned",
+                        $"You have been assigned '{task.Title}' ({projName})" + (task.DueDate.HasValue ? $" — due {task.DueDate:dd MMM}" : ""),
+                        NotificationType.Info,
+                        "/my-tasks");
+            }
         }
 
         var proj = await _db.Projects.FindAsync(dto.ProjectId);
@@ -651,7 +672,13 @@ public class SalesOrderService : ISalesOrderService
 {
     private readonly AppDbContext _db;
     private readonly IEmailService _email;
-    public SalesOrderService(AppDbContext db, IEmailService email) { _db = db; _email = email; }
+    private readonly INotificationService _notifications;
+    public SalesOrderService(AppDbContext db, IEmailService email, INotificationService notifications)
+    {
+        _db = db;
+        _email = email;
+        _notifications = notifications;
+    }
 
     public async Task<PagedResult<SalesOrderDto>> GetAllAsync(PaginationParams pagination)
     {
@@ -788,6 +815,18 @@ public class SalesOrderService : ISalesOrderService
         order.Status = OrderStatus.Confirmed;
         order.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        // Admin low-stock alerts
+        var lowStockProducts = order.Items.Where(i => i.Product.CurrentStock <= i.Product.MinimumStock).ToList();
+        foreach (var low in lowStockProducts)
+        {
+            await _notifications.CreateForRolesAsync(new[] { "Admin" },
+                "Low Stock Alert",
+                $"'{low.Product.Name}' is running low: {low.Product.CurrentStock} left (minimum: {low.Product.MinimumStock}) after {order.OrderNumber}",
+                NotificationType.Warning,
+                "/inventory");
+        }
+
         return ApiResponse<string>.Ok($"Order {order.OrderNumber} confirmed — stock deducted, invoice ready");
     }
 
@@ -1423,7 +1462,12 @@ public class PurchaseOrderService : IPurchaseOrderService
 public class FinanceService : IFinanceService
 {
     private readonly AppDbContext _db;
-    public FinanceService(AppDbContext db) => _db = db;
+    private readonly INotificationService _notifications;
+    public FinanceService(AppDbContext db, INotificationService notifications)
+    {
+        _db = db;
+        _notifications = notifications;
+    }
 
     public async Task<PagedResult<FinanceTransactionDto>> GetTransactionsAsync(PaginationParams pagination,
         DateTime? from = null, DateTime? to = null, TransactionType? type = null)
@@ -1538,9 +1582,23 @@ public class FinanceService : IFinanceService
                     budget.SpentAmount += expense.Amount;
                     budget.UpdatedAt = DateTime.UtcNow;
                     if (budget.SpentAmount > budget.AllocatedAmount)
+                    {
                         message += $" — ⚠ Budget exceeded for {deptName} ({budget.SpentAmount:F0}/{budget.AllocatedAmount:F0})";
+                        await _notifications.CreateForRolesAsync(new[] { "Admin" },
+                            "Budget Exceeded",
+                            $"{deptName} budget exceeded: ${budget.SpentAmount:F0} spent of ${budget.AllocatedAmount:F0} allocated ('{expense.Title}' approved)",
+                            NotificationType.Error,
+                            "/finance");
+                    }
                     else if (budget.AllocatedAmount > 0 && budget.SpentAmount / budget.AllocatedAmount >= 0.8m)
+                    {
                         message += $" — ⚠ {deptName} budget at {(budget.SpentAmount / budget.AllocatedAmount * 100m):F0}%";
+                        await _notifications.CreateForRolesAsync(new[] { "Admin" },
+                            "Budget Warning",
+                            $"{deptName} budget at {(budget.SpentAmount / budget.AllocatedAmount * 100m):F0}% used (${budget.SpentAmount:F0}/${budget.AllocatedAmount:F0})",
+                            NotificationType.Warning,
+                            "/finance");
+                    }
                 }
             }
         }

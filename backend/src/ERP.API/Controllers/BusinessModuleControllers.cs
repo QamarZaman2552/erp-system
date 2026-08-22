@@ -491,6 +491,52 @@ public class DashboardController : ControllerBase
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+public class NotificationsController(
+    INotificationService notificationService,
+    ICurrentUserService currentUser) : ControllerBase
+{
+    [HttpGet]
+    public async Task<IActionResult> GetMy([FromQuery] bool unreadOnly = false, [FromQuery] int limit = 50)
+        => Ok(await notificationService.GetMyAsync(currentUser.UserId!, unreadOnly, limit));
+
+    [HttpGet("unread-count")]
+    public async Task<IActionResult> UnreadCount()
+        => Ok(new { count = await notificationService.GetUnreadCountAsync(currentUser.UserId!) });
+
+    [HttpPost("{id:guid}/read")]
+    public async Task<IActionResult> MarkRead(Guid id)
+    {
+        var res = await notificationService.MarkReadAsync(id, currentUser.UserId!);
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpPost("read-all")]
+    public async Task<IActionResult> MarkAllRead()
+    {
+        await notificationService.MarkAllReadAsync(currentUser.UserId!);
+        return Ok(new { success = true, data = "All notifications marked as read" });
+    }
+
+    [HttpDelete]
+    public async Task<IActionResult> ClearAll()
+    {
+        await notificationService.ClearAllAsync(currentUser.UserId!);
+        return Ok(new { success = true, data = "Notifications cleared" });
+    }
+
+    [HttpPost("announce")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Announce([FromBody] CreateAnnouncementDto dto)
+    {
+        await notificationService.CreateForAllAsync(dto.Title, dto.Message, ERP.Domain.Enums.NotificationType.System);
+        return Ok(new { success = true, data = "Announcement sent to all users" });
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
 public class SuppliersController : ControllerBase
 {
     private readonly ISupplierService _supplierService;

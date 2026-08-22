@@ -842,11 +842,15 @@ public class LeaveService : ILeaveService
 {
     private readonly AppDbContext _db;
     private readonly IEmailService _emailService;
+    private readonly INotificationService _notifications;
+    private readonly ICurrentUserService _currentUser;
 
-    public LeaveService(AppDbContext db, IEmailService emailService)
+    public LeaveService(AppDbContext db, IEmailService emailService, INotificationService notificationService, ICurrentUserService currentUser)
     {
         _db = db;
         _emailService = emailService;
+        _notifications = notificationService;
+        _currentUser = currentUser;
     }
 
     public async Task<PagedResult<LeaveRequestDto>> GetAllAsync(PaginationParams pagination)
@@ -959,6 +963,16 @@ public class LeaveService : ILeaveService
         await _db.SaveChangesAsync();
 
         var emp = await _db.Employees.FindAsync(dto.EmployeeId);
+        var empName = $"{emp?.FirstName} {emp?.LastName}".Trim();
+
+        // Notify HR + Managers that a leave request is pending
+        await _notifications.CreateForRolesAsync(new[] { "HR", "Manager", "Admin" },
+            "New Leave Request",
+            $"{empName} requested {dto.LeaveType} leave ({days} day(s), {dto.StartDate:dd MMM}–{dto.EndDate:dd MMM})",
+            NotificationType.Warning,
+            "/leaves",
+            excludeUserId: _currentUser.UserId);
+
         return ApiResponse<LeaveRequestDto>.Ok(new LeaveRequestDto(
             leave.Id, leave.EmployeeId, $"{emp?.FirstName} {emp?.LastName}",
             leave.LeaveType, leave.StartDate, leave.EndDate, leave.TotalDays, leave.Reason, leave.Status, leave.CreatedAt
@@ -991,6 +1005,18 @@ public class LeaveService : ILeaveService
                 $"{leave.Employee.FirstName} {leave.Employee.LastName}",
                 dto.IsApproved
             );
+        }
+
+        // In-app notification to the employee
+        if (!string.IsNullOrEmpty(leave.Employee?.ApplicationUserId))
+        {
+            await _notifications.CreateAsync(leave.Employee.ApplicationUserId,
+                dto.IsApproved ? "Leave Approved" : "Leave Rejected",
+                dto.IsApproved
+                    ? $"Your {leave.LeaveType} leave ({leave.StartDate:dd MMM}–{leave.EndDate:dd MMM}) has been approved"
+                    : $"Your {leave.LeaveType} leave was rejected. Reason: {dto.RejectionReason}",
+                dto.IsApproved ? NotificationType.Success : NotificationType.Error,
+                "/leaves");
         }
 
         return ApiResponse<LeaveRequestDto>.Ok(new LeaveRequestDto(

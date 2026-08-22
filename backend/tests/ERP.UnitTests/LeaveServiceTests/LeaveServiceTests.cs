@@ -8,9 +8,45 @@ using ERP.UnitTests.Services;
 
 namespace ERP.UnitTests.LeaveServiceTests;
 
+public class FakeNotificationService : ERP.Application.Interfaces.INotificationService
+{
+    public List<(string UserId, string Title)> Created { get; } = [];
+    public Task CreateAsync(string userId, string title, string message, NotificationType type = NotificationType.Info, string? actionUrl = null)
+    {
+        if (!string.IsNullOrEmpty(userId)) Created.Add((userId, title));
+        return Task.CompletedTask;
+    }
+    public Task CreateForRolesAsync(IEnumerable<string> roles, string title, string message, NotificationType type = NotificationType.Info, string? actionUrl = null, string? excludeUserId = null)
+    {
+        Created.Add(("roles:" + string.Join(",", roles), title));
+        return Task.CompletedTask;
+    }
+    public Task CreateForAllAsync(string title, string message, NotificationType type = NotificationType.System, string? actionUrl = null)
+    {
+        Created.Add(("all", title));
+        return Task.CompletedTask;
+    }
+    public Task<List<ERP.Application.DTOs.Business.NotificationDto>> GetMyAsync(string userId, bool unreadOnly, int limit) => Task.FromResult(new List<ERP.Application.DTOs.Business.NotificationDto>());
+    public Task<int> GetUnreadCountAsync(string userId) => Task.FromResult(0);
+    public Task<ApiResponse<string>> MarkReadAsync(Guid id, string userId) => Task.FromResult(ApiResponse<string>.Ok("ok"));
+    public Task MarkAllReadAsync(string userId) => Task.CompletedTask;
+    public Task ClearAllAsync(string userId) => Task.CompletedTask;
+}
+
+public class StubCurrentUser : ERP.Application.Interfaces.ICurrentUserService
+{
+    public string? UserId { get; set; } = "test-user";
+    public string? UserName => "tester";
+    public string? UserEmail => "t@t.com";
+    public bool IsAuthenticated => true;
+    public bool IsInRole(string role) => false;
+}
+
 public class LeaveServiceTests : ServiceTestBase
 {
     private static Mock<IEmailService> EmailMock() => new();
+    private static FakeNotificationService NotifMock() => new();
+    private static StubCurrentUser CurrentUser() => new();
 
     private async Task<(AppDbContext db, Guid empId)> SeedEmployeeAsync()
     {
@@ -31,7 +67,7 @@ public class LeaveServiceTests : ServiceTestBase
     public async Task CreateAsync_CalculatesTotalDaysCorrectly()
     {
         var (db, empId) = await SeedEmployeeAsync();
-        var service = new LeaveService(db, EmailMock().Object);
+        var service = new LeaveService(db, EmailMock().Object, NotifMock(), CurrentUser());
         var start = new DateOnly(2026, 9, 1);
 
         var result = await service.CreateAsync(new CreateLeaveRequestDto(
@@ -46,7 +82,7 @@ public class LeaveServiceTests : ServiceTestBase
     public async Task CreateAsync_Fails_WhenEndDateBeforeStartDate()
     {
         var (db, empId) = await SeedEmployeeAsync();
-        var service = new LeaveService(db, EmailMock().Object);
+        var service = new LeaveService(db, EmailMock().Object, NotifMock(), CurrentUser());
 
         var result = await service.CreateAsync(new CreateLeaveRequestDto(
             empId, LeaveType.Sick, new DateOnly(2026, 9, 10), new DateOnly(2026, 9, 5), "Flu"));
@@ -60,7 +96,8 @@ public class LeaveServiceTests : ServiceTestBase
     {
         var (db, empId) = await SeedEmployeeAsync();
         var emailMock = EmailMock();
-        var service = new LeaveService(db, emailMock.Object);
+        var notifMock = NotifMock();
+        var service = new LeaveService(db, emailMock.Object, notifMock, CurrentUser());
 
         var created = await service.CreateAsync(new CreateLeaveRequestDto(
             empId, LeaveType.Annual, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 3), "Trip"));
@@ -78,7 +115,7 @@ public class LeaveServiceTests : ServiceTestBase
     public async Task ApproveAsync_Rejection_StoresReason()
     {
         var (db, empId) = await SeedEmployeeAsync();
-        var service = new LeaveService(db, EmailMock().Object);
+        var service = new LeaveService(db, EmailMock().Object, NotifMock(), CurrentUser());
 
         var created = await service.CreateAsync(new CreateLeaveRequestDto(
             empId, LeaveType.Unpaid, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 2), "Personal"));
@@ -96,7 +133,7 @@ public class LeaveServiceTests : ServiceTestBase
     public async Task ApproveAsync_ReturnsFail_WhenNotFound()
     {
         var (db, _) = await SeedEmployeeAsync();
-        var service = new LeaveService(db, EmailMock().Object);
+        var service = new LeaveService(db, EmailMock().Object, NotifMock(), CurrentUser());
 
         var result = await service.ApproveAsync(Guid.NewGuid(), new ApproveLeaveDto(true, null), "x");
 
@@ -107,7 +144,7 @@ public class LeaveServiceTests : ServiceTestBase
     public async Task CancelAsync_MarksCancelled()
     {
         var (db, empId) = await SeedEmployeeAsync();
-        var service = new LeaveService(db, EmailMock().Object);
+        var service = new LeaveService(db, EmailMock().Object, NotifMock(), CurrentUser());
 
         var created = await service.CreateAsync(new CreateLeaveRequestDto(
             empId, LeaveType.Annual, new DateOnly(2026, 9, 1), new DateOnly(2026, 9, 2), "Plans changed"));

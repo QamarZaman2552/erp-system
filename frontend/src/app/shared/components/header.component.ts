@@ -1,6 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ApiService } from '../../core/services/api.service';
@@ -44,13 +44,22 @@ import { UiService } from '../../core/services/ui.service';
           <div class="notification-dropdown" *ngIf="showNotifications()">
             <div class="dropdown-header">
               <span class="font-semibold">Notifications</span>
-              <button class="text-xs text-indigo-400" (click)="notificationService.clearAll()">Clear All</button>
+              <div>
+                <button class="text-xs text-indigo-400 me-2" (click)="markAllRead()">Mark all read</button>
+                <button class="text-xs text-danger" (click)="clearAll()">Clear All</button>
+              </div>
             </div>
             <div class="dropdown-list">
-              <div class="dropdown-item" *ngFor="let n of notifications()">
-                <div class="item-title">{{ n.title }}</div>
+              <div class="dropdown-item"
+                   *ngFor="let n of notifications()"
+                   [ngClass]="{ 'unread-item': !n.isRead }"
+                   (click)="openNotification(n)"
+                   style="cursor: pointer;">
+                <div class="item-title">
+                  <span class="me-1">{{ typeIcon(n.type) }}</span>{{ n.title }}
+                </div>
                 <div class="item-msg">{{ n.message }}</div>
-                <div class="item-time">{{ n.timestamp | date:'shortTime' }}</div>
+                <div class="item-time">{{ n.timestamp | date:'short' }}</div>
               </div>
               <div class="empty-state" *ngIf="notifications().length === 0">
                 No new notifications
@@ -58,6 +67,11 @@ import { UiService } from '../../core/services/ui.service';
             </div>
           </div>
         </div>
+
+        <!-- Admin: System Announcement -->
+        <button class="btn btn-sm btn-outline-warning" *ngIf="auth.hasRole(['Admin'])" (click)="announce()" title="Send announcement to all users">
+          📢
+        </button>
 
         <!-- Logout Action -->
         <button class="btn btn-sm btn-secondary" (click)="logout()">
@@ -242,6 +256,11 @@ import { UiService } from '../../core/services/ui.service';
       color: var(--text-muted);
       font-size: 13px;
     }
+
+    .unread-item {
+      background: rgba(99, 102, 241, 0.08);
+      border-left: 2px solid #6366f1;
+    }
   `]
 })
 export class HeaderComponent {
@@ -249,6 +268,7 @@ export class HeaderComponent {
   notificationService = inject(NotificationService);
   apiService = inject(ApiService);
   ui = inject(UiService);
+  private router = inject(Router);
 
   showNotifications = signal(false);
   isCheckedIn = signal(false);
@@ -258,6 +278,46 @@ export class HeaderComponent {
 
   toggleNotifications(): void {
     this.showNotifications.update(s => !s);
+    if (this.showNotifications()) this.notificationService.loadFromServer();
+  }
+
+  openNotification(n: any): void {
+    if (!n.isRead) this.notificationService.markRead(n.id);
+    if (n.actionUrl) {
+      this.showNotifications.set(false);
+      this.router.navigateByUrl(n.actionUrl);
+    }
+  }
+
+  markAllRead(): void { this.notificationService.markAllRead(); }
+
+  clearAll(): void { this.notificationService.clearAll(); }
+
+  typeIcon(type: string): string {
+    switch (type) {
+      case 'Success': return '✅';
+      case 'Warning': return '⚠️';
+      case 'Error': return '❌';
+      case 'System': return '📢';
+      default: return '🔔';
+    }
+  }
+
+  announce(): void {
+    const title = prompt('Announcement title:');
+    if (!title) return;
+    const message = prompt('Announcement message:');
+    if (!message) return;
+    this.apiService.announce(title, message).subscribe({
+      next: () => this.notificationService.addNotification({
+        id: Math.random().toString(),
+        title: 'Announcement Sent',
+        message: `📢 "${title}" sent to all users`,
+        type: 'System',
+        isRead: true,
+        timestamp: new Date()
+      })
+    });
   }
 
   quickCheckIn(): void {

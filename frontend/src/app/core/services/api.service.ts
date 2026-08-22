@@ -358,6 +358,33 @@ export class ApiService {
     return this.http.get<any[]>(`${this.baseUrl}/categories`);
   }
 
+  // ─── Notifications ─────────────────────────────────────────────────────────
+  getNotifications(unreadOnly = false, limit = 50): Observable<any[]> {
+    let params = new HttpParams().set('limit', limit.toString());
+    if (unreadOnly) params = params.set('unreadOnly', 'true');
+    return this.http.get<any[]>(`${this.baseUrl}/notifications`, { params });
+  }
+
+  unreadNotificationCount(): Observable<{ count: number }> {
+    return this.http.get<{ count: number }>(`${this.baseUrl}/notifications/unread-count`);
+  }
+
+  markNotificationRead(id: string): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/notifications/${id}/read`, {});
+  }
+
+  markAllNotificationsRead(): Observable<ApiResponse<string>> {
+    return this.http.post<ApiResponse<string>>(`${this.baseUrl}/notifications/read-all`, {});
+  }
+
+  clearNotifications(): Observable<ApiResponse<string>> {
+    return this.http.delete<ApiResponse<string>>(`${this.baseUrl}/notifications`);
+  }
+
+  announce(title: string, message: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/notifications/announce`, { title, message });
+  }
+
   // ─── Sales & Purchase ──────────────────────────────────────────────────────
   getSalesOrders(page = 1, pageSize = 10): Observable<PagedResult<SalesOrder>> {
     const params = new HttpParams().set('page', page.toString()).set('pageSize', pageSize.toString());

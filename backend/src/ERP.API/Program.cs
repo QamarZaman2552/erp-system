@@ -1,10 +1,10 @@
 ﻿using System.Text;
 using ERP.API.Filters;
-using ERP.API.Hubs;
 using ERP.Application.Validators;
 using ERP.Infrastructure.Data.Seeders;
 using FluentValidation;
 using ERP.Infrastructure.Extensions;
+using ERP.Infrastructure.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
