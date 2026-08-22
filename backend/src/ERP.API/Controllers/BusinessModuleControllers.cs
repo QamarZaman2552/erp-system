@@ -1,6 +1,7 @@
 using ERP.Application.Common;
 using ERP.Application.DTOs.Business;
 using ERP.Application.Interfaces;
+using ERP.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -364,10 +365,42 @@ public class FinanceController(
 {
 
     [HttpGet("transactions")]
-    public async Task<IActionResult> GetTransactions([FromQuery] PaginationParams pagination)
+    public async Task<IActionResult> GetTransactions([FromQuery] PaginationParams pagination,
+        [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] TransactionType? type)
     {
-        var result = await financeService.GetTransactionsAsync(pagination);
+        var result = await financeService.GetTransactionsAsync(pagination, from, to, type);
         return Ok(result);
+    }
+
+    [HttpGet("transactions/export-csv")]
+    public async Task<IActionResult> ExportCsv([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+    {
+        var csv = await financeService.ExportTransactionsCsvAsync(from, to);
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", $"transactions-{DateTime.UtcNow:yyyyMMdd}.csv");
+    }
+
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetSummary([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        => Ok(await financeService.GetSummaryAsync(from, to));
+
+    [HttpGet("reports/by-department")]
+    public async Task<IActionResult> DeptExpenseReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        => Ok(await financeService.GetDepartmentExpenseReportAsync(from, to));
+
+    [HttpGet("reports/by-category")]
+    public async Task<IActionResult> CategoryExpenseReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
+        => Ok(await financeService.GetCategoryExpenseReportAsync(from, to));
+
+    [HttpGet("budgets/alerts")]
+    public async Task<IActionResult> BudgetAlerts([FromQuery] int month, [FromQuery] int year)
+        => Ok(await financeService.GetBudgetAlertsAsync(month, year));
+
+    [HttpGet("reports/export-pdf")]
+    public async Task<IActionResult> ExportReportPdf([FromQuery] int year = 0, [FromQuery] int? quarter = null, [FromQuery] int? month = null)
+    {
+        if (year == 0) year = DateTime.UtcNow.Year;
+        var pdf = await financeService.ExportFinancialReportPdfAsync(year, quarter, month);
+        return File(pdf, "application/pdf", $"financial-report-{year}.pdf");
     }
 
     [HttpPost("transactions")]

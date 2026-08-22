@@ -1,3 +1,4 @@
+using System.Text;
 using ERP.Application.Common;
 using ERP.Application.DTOs.Business;
 using ERP.Application.Interfaces;
@@ -1424,9 +1425,14 @@ public class FinanceService : IFinanceService
     private readonly AppDbContext _db;
     public FinanceService(AppDbContext db) => _db = db;
 
-    public async Task<PagedResult<FinanceTransactionDto>> GetTransactionsAsync(PaginationParams pagination)
+    public async Task<PagedResult<FinanceTransactionDto>> GetTransactionsAsync(PaginationParams pagination,
+        DateTime? from = null, DateTime? to = null, TransactionType? type = null)
     {
         var query = _db.FinanceTransactions.Include(t => t.Category).AsNoTracking();
+        if (from.HasValue) query = query.Where(t => t.TransactionDate >= from.Value);
+        if (to.HasValue) query = query.Where(t => t.TransactionDate <= to.Value);
+        if (type.HasValue) query = query.Where(t => t.Type == type.Value);
+
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(t => t.TransactionDate)
             .Skip((pagination.Page - 1) * pagination.PageSize)
@@ -1490,6 +1496,8 @@ public class FinanceService : IFinanceService
     {
         var expense = await _db.Expenses.FindAsync(id);
         if (expense == null) return ApiResponse<ExpenseDto>.Fail("Expense not found");
+        if (expense.Status != ExpenseStatus.Pending)
+            return ApiResponse<ExpenseDto>.Fail($"Expense already {expense.Status}");
 
         expense.Status = dto.IsApproved ? ExpenseStatus.Approved : ExpenseStatus.Rejected;
         expense.ApprovedByUserId = approverId;
@@ -1497,8 +1505,48 @@ public class FinanceService : IFinanceService
         expense.RejectionReason = dto.RejectionReason;
         expense.UpdatedAt = DateTime.UtcNow;
 
+        var message = $"Expense {(dto.IsApproved ? "approved" : "rejected")}";
+
+        if (dto.IsApproved)
+        {
+            // Auto-record in finance ledger
+            var category = await FinanceCategoryHelper.GetOrCreateAsync(_db, "Employee Expense", TransactionType.Expense);
+            _db.FinanceTransactions.Add(new FinanceTransaction
+            {
+                CategoryId = category.Id,
+                Type = TransactionType.Expense,
+                Amount = expense.Amount,
+                TransactionDate = DateTime.UtcNow,
+                Description = $"Approved expense: {expense.Title}",
+                Reference = expense.Category,
+                CreatedByUserId = approverId
+            });
+
+            // Update department budget actuals + exceed check
+            var deptName = await _db.Employees
+                .Where(e => e.ApplicationUserId == expense.SubmittedByUserId)
+                .Select(e => e.Department.Name)
+                .FirstOrDefaultAsync();
+
+            if (!string.IsNullOrEmpty(deptName))
+            {
+                var budget = await _db.Budgets.FirstOrDefaultAsync(b =>
+                    b.Department == deptName && b.Month == expense.ExpenseDate.Month && b.Year == expense.ExpenseDate.Year);
+
+                if (budget != null)
+                {
+                    budget.SpentAmount += expense.Amount;
+                    budget.UpdatedAt = DateTime.UtcNow;
+                    if (budget.SpentAmount > budget.AllocatedAmount)
+                        message += $" — ⚠ Budget exceeded for {deptName} ({budget.SpentAmount:F0}/{budget.AllocatedAmount:F0})";
+                    else if (budget.AllocatedAmount > 0 && budget.SpentAmount / budget.AllocatedAmount >= 0.8m)
+                        message += $" — ⚠ {deptName} budget at {(budget.SpentAmount / budget.AllocatedAmount * 100m):F0}%";
+                }
+            }
+        }
+
         await _db.SaveChangesAsync();
-        return ApiResponse<ExpenseDto>.Ok(new ExpenseDto(expense.Id, expense.Title, expense.Amount, expense.ExpenseDate, expense.Category, expense.Status, expense.SubmittedByUserId, expense.CreatedAt), $"Expense {(dto.IsApproved ? "approved" : "rejected")}");
+        return ApiResponse<ExpenseDto>.Ok(new ExpenseDto(expense.Id, expense.Title, expense.Amount, expense.ExpenseDate, expense.Category, expense.Status, expense.SubmittedByUserId, expense.CreatedAt), message);
     }
 
     public async Task<List<BudgetDto>> GetBudgetsAsync(int month, int year)
@@ -1526,6 +1574,161 @@ public class FinanceService : IFinanceService
 
         return ApiResponse<BudgetDto>.Ok(new BudgetDto(budget.Id, budget.Name, budget.AllocatedAmount, 0, budget.AllocatedAmount, budget.Department, budget.Month, budget.Year), "Budget created");
     }
+
+    public async Task<FinanceSummaryDto> GetSummaryAsync(DateTime? from, DateTime? to)
+    {
+        var query = _db.FinanceTransactions.AsNoTracking();
+        if (from.HasValue) query = query.Where(t => t.TransactionDate >= from.Value);
+        if (to.HasValue) query = query.Where(t => t.TransactionDate <= to.Value);
+        else query = query.Where(t => t.TransactionDate.Year == DateTime.UtcNow.Year); // default: current year
+
+        var rows = await query.Select(t => new { t.TransactionDate.Month, t.Type, t.Amount }).ToListAsync();
+
+        var monthNames = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        var monthsToReport = (from.HasValue || to.HasValue)
+            ? rows.Select(r => r.Month).Distinct().OrderBy(m => m).ToList()
+            : Enumerable.Range(1, 12).ToList();
+
+        var monthly = monthsToReport.Select(m =>
+            new MonthlyIncomeExpenseDto(monthNames[m - 1],
+                rows.Where(r => r.Month == m && r.Type == TransactionType.Income).Sum(r => r.Amount),
+                rows.Where(r => r.Month == m && r.Type == TransactionType.Expense).Sum(r => r.Amount))).ToList();
+
+        var totalIncome = rows.Where(r => r.Type == TransactionType.Income).Sum(r => r.Amount);
+        var totalExpense = rows.Where(r => r.Type == TransactionType.Expense).Sum(r => r.Amount);
+        return new FinanceSummaryDto(totalIncome, totalExpense, totalIncome - totalExpense, monthly);
+    }
+
+    public async Task<List<DepartmentExpenseReportDto>> GetDepartmentExpenseReportAsync(DateTime? from, DateTime? to)
+    {
+        var query = _db.Expenses.AsNoTracking().Where(e => e.Status == ExpenseStatus.Approved);
+        if (from.HasValue) query = query.Where(e => e.ExpenseDate >= from.Value);
+        if (to.HasValue) query = query.Where(e => e.ExpenseDate <= to.Value);
+
+        var rows = await query
+            .Select(e => new
+            {
+                e.Amount,
+                Dept = _db.Employees.Where(emp => emp.ApplicationUserId == e.SubmittedByUserId).Select(emp => emp.Department.Name).FirstOrDefault()
+            })
+            .ToListAsync();
+
+        return rows.GroupBy(r => r.Dept ?? "Unassigned")
+            .Select(g => new DepartmentExpenseReportDto(g.Key, g.Count(), g.Sum(x => x.Amount)))
+            .OrderByDescending(r => r.Amount)
+            .ToList();
+    }
+
+    public async Task<List<CategoryExpenseReportDto>> GetCategoryExpenseReportAsync(DateTime? from, DateTime? to)
+    {
+        var query = _db.Expenses.AsNoTracking().Where(e => e.Status == ExpenseStatus.Approved);
+        if (from.HasValue) query = query.Where(e => e.ExpenseDate >= from.Value);
+        if (to.HasValue) query = query.Where(e => e.ExpenseDate <= to.Value);
+
+        var rows = await query.Select(e => new { e.Category, e.Amount }).ToListAsync();
+
+        return rows.GroupBy(r => r.Category)
+            .Select(g => new CategoryExpenseReportDto(g.Key, g.Count(), g.Sum(x => x.Amount)))
+            .OrderByDescending(r => r.Amount)
+            .ToList();
+    }
+
+    public async Task<List<BudgetAlertDto>> GetBudgetAlertsAsync(int month, int year)
+    {
+        var budgets = await _db.Budgets
+            .Where(b => b.Month == month && b.Year == year)
+            .Select(b => new BudgetAlertDto(b.Id, b.Name, b.Department, b.AllocatedAmount, b.SpentAmount,
+                b.AllocatedAmount - b.SpentAmount,
+                b.AllocatedAmount > 0 ? (double)(b.SpentAmount / b.AllocatedAmount * 100m) : 0,
+                ""))
+            .ToListAsync();
+
+        return budgets
+            .Select(b => b with
+            {
+                AlertLevel = b.PercentUsed >= 100 ? "Exceeded" : b.PercentUsed >= 80 ? "Warning" : "Ok"
+            })
+            .Where(b => b.AlertLevel != "Ok")
+            .OrderByDescending(b => b.PercentUsed)
+            .ToList();
+    }
+
+    public async Task<byte[]> ExportFinancialReportPdfAsync(int year, int? quarter, int? month)
+    {
+        string title;
+        DateTime? from = null;
+        DateTime? to = null;
+
+        if (month.HasValue)
+        {
+            title = $"Financial Report — {year}/{month:D2}";
+            from = new DateTime(year, month.Value, 1);
+            to = from.Value.AddMonths(1).AddSeconds(-1);
+        }
+        else if (quarter.HasValue)
+        {
+            var startMonth = (quarter.Value - 1) * 3 + 1;
+            title = $"Financial Report — Q{quarter} {year}";
+            from = new DateTime(year, startMonth, 1);
+            to = new DateTime(year, startMonth + 2, DateTime.DaysInMonth(year, startMonth + 2));
+        }
+        else
+        {
+            title = $"Annual Financial Report — {year}";
+            from = new DateTime(year, 1, 1);
+            to = new DateTime(year, 12, 31);
+        }
+
+        var summary = await GetSummaryAsync(from, to);
+        var deptReport = await GetDepartmentExpenseReportAsync(from, to);
+        var catReport = await GetCategoryExpenseReportAsync(from, to);
+
+        var lines = new List<string>
+        {
+            $"##Period: {(month.HasValue ? $"{year}-{month:D2}" : quarter.HasValue ? $"Q{quarter} {year}" : $"Jan–Dec {year}")}",
+            $"Total Income: ${summary.TotalIncome:N2}",
+            $"Total Expense: ${summary.TotalExpense:N2}",
+            $"##NET PROFIT: ${summary.NetProfit:N2}",
+            "",
+            "##Monthly Breakdown"
+        };
+        foreach (var m in summary.Monthly)
+            lines.Add($"  {m.Month}: Income ${m.Income:N0} | Expense ${m.Expense:N0} | Net ${(m.Income - m.Expense):N0}");
+
+        lines.Add("");
+        lines.Add("##Department-wise Expenses");
+        foreach (var d in deptReport.Take(10))
+            lines.Add($"  {d.Department}: ${d.Amount:N2} ({d.Count} claims)");
+        if (deptReport.Count == 0) lines.Add("  No approved expenses in period");
+
+        lines.Add("");
+        lines.Add("##Category-wise Expenses");
+        foreach (var c in catReport.Take(10))
+            lines.Add($"  {c.Category}: ${c.Amount:N2} ({c.Count} claims)");
+        if (catReport.Count == 0) lines.Add("  No data");
+
+        return SimplePdfGenerator.Generate(title, lines);
+    }
+
+    public async Task<string> ExportTransactionsCsvAsync(DateTime? from, DateTime? to)
+    {
+        var query = _db.FinanceTransactions.Include(t => t.Category).AsNoTracking();
+        if (from.HasValue) query = query.Where(t => t.TransactionDate >= from.Value);
+        if (to.HasValue) query = query.Where(t => t.TransactionDate <= to.Value);
+
+        var rows = await query.OrderBy(t => t.TransactionDate)
+            .Select(t => new { t.TransactionDate, t.Type, Category = t.Category.Name, t.Amount, t.Description, Reference = t.Reference ?? "" })
+            .ToListAsync();
+
+        var sb = new StringBuilder("Date,Type,Category,Amount,Description,Reference\n");
+        foreach (var r in rows)
+            sb.Append($"{r.TransactionDate:yyyy-MM-dd},{r.Type},{CsvEscape(r.Category)},{r.Amount:F2},{CsvEscape(r.Description)},{CsvEscape(r.Reference)}\n");
+
+        return sb.ToString();
+    }
+
+    private static string CsvEscape(string s) =>
+        string.IsNullOrEmpty(s) ? "" : (s.Contains(',') || s.Contains('"') || s.Contains('\n') ? $"\"{s.Replace("\"", "\"\"")}\"" : s);
 }
 
 public class DashboardService : IDashboardService

@@ -1,5 +1,6 @@
 using ERP.Application.Common;
 using ERP.Application.DTOs.Business;
+using ERP.Domain.Enums;
 
 namespace ERP.Application.Interfaces;
 
@@ -121,13 +122,22 @@ public interface IPurchaseOrderService
 
 public interface IFinanceService
 {
-    Task<PagedResult<FinanceTransactionDto>> GetTransactionsAsync(PaginationParams pagination);
+    Task<PagedResult<FinanceTransactionDto>> GetTransactionsAsync(PaginationParams pagination,
+        DateTime? from = null, DateTime? to = null, TransactionType? type = null);
     Task<ApiResponse<FinanceTransactionDto>> CreateTransactionAsync(CreateFinanceTransactionDto dto);
     Task<PagedResult<ExpenseDto>> GetExpensesAsync(PaginationParams pagination);
     Task<ApiResponse<ExpenseDto>> CreateExpenseAsync(CreateExpenseDto dto);
     Task<ApiResponse<ExpenseDto>> ApproveExpenseAsync(Guid id, ApproveExpenseDto dto, string approverId);
     Task<List<BudgetDto>> GetBudgetsAsync(int month, int year);
     Task<ApiResponse<BudgetDto>> CreateBudgetAsync(CreateBudgetDto dto);
+
+    // Reports & analytics
+    Task<FinanceSummaryDto> GetSummaryAsync(DateTime? from, DateTime? to);
+    Task<List<DepartmentExpenseReportDto>> GetDepartmentExpenseReportAsync(DateTime? from, DateTime? to);
+    Task<List<CategoryExpenseReportDto>> GetCategoryExpenseReportAsync(DateTime? from, DateTime? to);
+    Task<List<BudgetAlertDto>> GetBudgetAlertsAsync(int month, int year);
+    Task<byte[]> ExportFinancialReportPdfAsync(int year, int? quarter, int? month);
+    Task<string> ExportTransactionsCsvAsync(DateTime? from, DateTime? to);
 }
 
 public interface IDashboardService

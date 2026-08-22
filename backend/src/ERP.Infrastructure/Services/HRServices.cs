@@ -1214,6 +1214,35 @@ public class PayrollService : IPayrollService
                 payroll.OtherDeductions, payroll.WorkingDays, payroll.PresentDays, payroll.LeaveDays));
         }
 
+        // Auto-record payroll expense in finance ledger (idempotent per month)
+        var payrollRef = $"PAYROLL-{dto.Year}-{dto.Month:D2}";
+        var payrollTxnExists = await _db.FinanceTransactions.AnyAsync(t => t.Reference == payrollRef);
+        if (!payrollTxnExists && resultList.Count > 0)
+        {
+            var totalNet = await _db.PayrollRecords
+                .Where(p => p.Month == dto.Month && p.Year == dto.Year)
+                .SumAsync(p => p.NetSalary);
+
+            var payrollCategory = await _db.FinanceCategories.FirstOrDefaultAsync(c => c.Name == "Payroll Expense");
+            if (payrollCategory == null)
+            {
+                payrollCategory = new FinanceCategory { Name = "Payroll Expense", Type = TransactionType.Expense };
+                _db.FinanceCategories.Add(payrollCategory);
+                await _db.SaveChangesAsync();
+            }
+
+            _db.FinanceTransactions.Add(new FinanceTransaction
+            {
+                CategoryId = payrollCategory.Id,
+                Type = TransactionType.Expense,
+                Amount = totalNet,
+                TransactionDate = DateTime.UtcNow,
+                Description = $"Payroll {dto.Year}-{dto.Month:D2} ({resultList.Count} employees)",
+                Reference = payrollRef
+            });
+            await _db.SaveChangesAsync();
+        }
+
         return ApiResponse<List<PayrollDto>>.Ok(resultList, "Payroll generated successfully");
     }
 

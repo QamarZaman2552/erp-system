@@ -134,6 +134,16 @@ public record BudgetDto(Guid Id, string Name, decimal AllocatedAmount, decimal S
     decimal Remaining, string Department, int Month, int Year);
 public record CreateBudgetDto(string Name, decimal AllocatedAmount, string Department, int Month, int Year, string? Notes);
 
+// ─── Finance Reports & Analytics ──────────────────────────────────────────────
+
+public record FinanceSummaryDto(decimal TotalIncome, decimal TotalExpense, decimal NetProfit,
+    List<MonthlyIncomeExpenseDto> Monthly);
+public record MonthlyIncomeExpenseDto(string Month, decimal Income, decimal Expense);
+public record DepartmentExpenseReportDto(string Department, int Count, decimal Amount);
+public record CategoryExpenseReportDto(string Category, int Count, decimal Amount);
+public record BudgetAlertDto(Guid Id, string Name, string Department, decimal AllocatedAmount,
+    decimal SpentAmount, decimal Remaining, double PercentUsed, string AlertLevel);
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 public record DashboardStatsDto(

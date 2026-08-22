@@ -468,9 +468,54 @@ export class ApiService {
   }
 
   // ─── Finance ───────────────────────────────────────────────────────────────
-  getTransactions(page = 1, pageSize = 10): Observable<PagedResult<FinanceTransaction>> {
-    const params = new HttpParams().set('page', page.toString()).set('pageSize', pageSize.toString());
+  getTransactions(page = 1, pageSize = 10, from?: string, to?: string, type?: string): Observable<PagedResult<FinanceTransaction>> {
+    let params = new HttpParams().set('page', page.toString()).set('pageSize', pageSize.toString());
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    if (type) params = params.set('type', type);
     return this.http.get<PagedResult<FinanceTransaction>>(`${this.baseUrl}/finance/transactions`, { params });
+  }
+
+  getFinanceSummary(from?: string, to?: string): Observable<any> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get(`${this.baseUrl}/finance/summary`, { params });
+  }
+
+  deptExpenseReport(from?: string, to?: string): Observable<any[]> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<any[]>(`${this.baseUrl}/finance/reports/by-department`, { params });
+  }
+
+  categoryExpenseReport(from?: string, to?: string): Observable<any[]> {
+    let params = new HttpParams();
+    if (from) params = params.set('from', from);
+    if (to) params = params.set('to', to);
+    return this.http.get<any[]>(`${this.baseUrl}/finance/reports/by-category`, { params });
+  }
+
+  budgetAlerts(month: number, year: number): Observable<any[]> {
+    const params = new HttpParams().set('month', month.toString()).set('year', year.toString());
+    return this.http.get<any[]>(`${this.baseUrl}/finance/budgets/alerts`, { params });
+  }
+
+  financeReportPdfUrl(year: number, quarter?: number, month?: number): string {
+    let url = `${this.baseUrl}/finance/reports/export-pdf?year=${year}`;
+    if (quarter) url += `&quarter=${quarter}`;
+    if (month) url += `&month=${month}`;
+    return url;
+  }
+
+  transactionsCsvUrl(from?: string, to?: string): string {
+    let url = `${this.baseUrl}/finance/transactions/export-csv`;
+    const qs: string[] = [];
+    if (from) qs.push(`from=${from}`);
+    if (to) qs.push(`to=${to}`);
+    if (qs.length) url += '?' + qs.join('&');
+    return url;
   }
 
   getExpenses(page = 1, pageSize = 10): Observable<PagedResult<Expense>> {
