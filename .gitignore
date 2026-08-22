@@ -1,0 +1,43 @@
+# ===== .NET / Visual Studio =====
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.log
+fatal_error.log
+artifacts/
+TestResults/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Bb]in/[Oo]bj/
+
+# NuGet
+*.nupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+
+# ===== Angular / Node =====
+node_modules/
+dist/
+.angular/
+npm-debug.log*
+yarn-error.log*
+coverage/
+
+# ===== Environment / Secrets =====
+appsettings.Development.json
+.env
+.env.*
+!.env.example
+
+# ===== OS =====
+Thumbs.db
+Desktop.ini
+.DS_Store

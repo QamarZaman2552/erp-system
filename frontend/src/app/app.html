@@ -1,0 +1,36 @@
+<div *ngIf="auth.isAuthenticated()" class="app-container">
+  <app-sidebar></app-sidebar>
+  <div class="sidebar-overlay" (click)="ui.closeSidebar()"></div>
+  <div class="main-content-wrapper">
+    <app-header></app-header>
+    <main class="page-container">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
+<div *ngIf="!auth.isAuthenticated()">
+  <router-outlet></router-outlet>
+</div>
+
+<div class="toast-container" aria-live="polite">
+  @for (t of toast.toasts(); track t.id) {
+    <div class="erp-toast erp-toast-{{ t.type }}">
+      <div class="erp-toast-icon">
+        @switch (t.type) {
+          @case ('success') { <i class="bi bi-check-circle-fill"></i> }
+          @case ('error') { <i class="bi bi-x-circle-fill"></i> }
+          @case ('warning') { <i class="bi bi-exclamation-triangle-fill"></i> }
+          @default { <i class="bi bi-info-circle-fill"></i> }
+        }
+      </div>
+      <div class="erp-toast-body">
+        <strong>{{ t.title }}</strong>
+        <p>{{ t.message }}</p>
+      </div>
+      <button type="button" class="erp-toast-close" (click)="toast.dismiss(t.id)" aria-label="Close">
+        &times;
+      </button>
+    </div>
+  }
+</div>

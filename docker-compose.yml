@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: erp-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=EnterpriseERP_Pass2026!
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql/data
+    networks:
+      - erp-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: erp-backend-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=EnterpriseERP_DB;User Id=sa;Password=EnterpriseERP_Pass2026!;TrustServerCertificate=True;
+      - JwtSettings__SecretKey=EnterpriseERP_SuperSecret_MasterSecurityKey_2026_Min32Chars!
+      - JwtSettings__Issuer=EnterpriseERP
+      - JwtSettings__Audience=EnterpriseERP-Client
+    ports:
+      - "7001:8080"
+    depends_on:
+      - sqlserver
+    networks:
+      - erp-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: erp-frontend-web
+    ports:
+      - "4200:80"
+    depends_on:
+      - backend
+    networks:
+      - erp-network
+
+networks:
+  erp-network:
+    driver: bridge
+
+volumes:
+  sqlserver_data:

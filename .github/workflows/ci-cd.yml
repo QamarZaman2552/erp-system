@@ -1,0 +1,42 @@
+name: Enterprise ERP CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, dev, "feature/*" ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test-backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore backend/ERP.slnx
+
+    - name: Build Backend
+      run: dotnet build backend/ERP.slnx --no-restore --configuration Release
+
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install Frontend Dependencies
+      working-directory: ./frontend
+      run: npm ci || npm install
+
+    - name: Build Frontend
+      working-directory: ./frontend
+      run: npm run build --if-present
