@@ -1,7 +1,7 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
-import { TeamMember, ProjectTask } from '../../core/models/erp.models';
+import { TeamMember, ProjectTask, AttendanceRecord } from '../../core/models/erp.models';
 
 @Component({
   selector: 'app-team',
@@ -87,6 +87,47 @@ import { TeamMember, ProjectTask } from '../../core/models/erp.models';
       </ng-template>
     </div>
 
+    <!-- Today's Team Attendance -->
+    <div class="card p-0 mb-4">
+      <div class="p-3 border-bottom border-secondary border-opacity-10">
+        <h5 class="h6 mb-0"><i class="bi bi-alarm me-2"></i>Team Attendance — Today</h5>
+      </div>
+      <div class="table-responsive" *ngIf="team().length > 0; else noTeam2">
+        <table class="table table-hover align-middle mb-0">
+          <thead>
+            <tr class="small text-secondary">
+              <th class="ps-3">Code</th>
+              <th>Name</th>
+              <th class="text-center">Status</th>
+              <th>Check In</th>
+              <th>Check Out</th>
+              <th class="text-end pe-3">Hours</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let m of team()">
+              <td class="ps-3"><span class="badge bg-secondary">{{ m.employeeCode }}</span></td>
+              <td class="fw-semibold">{{ m.employeeName }}</td>
+              <td class="text-center">
+                <span class="badge" [class.bg-success]="todayStatus(m.employeeId) === 'Present'"
+                      [class.bg-warning]="todayStatus(m.employeeId) === 'Late'"
+                      [class.bg-danger]="todayStatus(m.employeeId) === 'Absent' || todayStatus(m.employeeId) === 'No Record'"
+                      [class.bg-secondary]="todayStatus(m.employeeId) === 'Not Marked'">
+                  {{ todayStatus(m.employeeId) }}
+                </span>
+              </td>
+              <td class="small">{{ checkInOf(m.employeeId) || '—' }}</td>
+              <td class="small">{{ checkOutOf(m.employeeId) || '—' }}</td>
+              <td class="text-end pe-3 small">{{ hoursOf(m.employeeId) ?? '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <ng-template #noTeam2>
+        <div class="p-4 text-center text-secondary small">Add team members to see attendance.</div>
+      </ng-template>
+    </div>
+
     <!-- Overdue Tasks -->
     <div class="card p-0">
       <div class="p-3 border-bottom border-secondary border-opacity-10 d-flex justify-content-between align-items-center">
@@ -133,6 +174,7 @@ export class TeamComponent implements OnInit {
 
   team = signal<TeamMember[]>([]);
   overdueTasks = signal<ProjectTask[]>([]);
+  todayAttendance = signal<AttendanceRecord[]>([]);
 
   ngOnInit(): void {
     this.api.getMyTeam().subscribe({
@@ -141,6 +183,34 @@ export class TeamComponent implements OnInit {
     this.api.getOverdueTasks().subscribe({
       next: (res) => this.overdueTasks.set(res || [])
     });
+    this.api.getTodayAttendance(1, 200).subscribe({
+      next: (res) => this.todayAttendance.set(res?.items || [])
+    });
+  }
+
+  recOf(employeeId: string): AttendanceRecord | undefined {
+    const today = new Date().toDateString();
+    return this.todayAttendance().find(r =>
+      r.employeeId === employeeId && new Date(r.attendanceDate).toDateString() === today);
+  }
+
+  todayStatus(employeeId: string): string {
+    const r = this.recOf(employeeId);
+    if (!r) return 'No Record';
+    if (!r.isPresent && !r.checkInTime) return 'Not Marked';
+    return r.isLateArrival ? 'Late' : 'Present';
+  }
+
+  checkInOf(employeeId: string): string | null {
+    return this.recOf(employeeId)?.checkInTime ?? null;
+  }
+
+  checkOutOf(employeeId: string): string | null {
+    return this.recOf(employeeId)?.checkOutTime ?? null;
+  }
+
+  hoursOf(employeeId: string): number | null {
+    return this.recOf(employeeId)?.workingHours ?? null;
   }
 
   totalActiveTasks(): number {

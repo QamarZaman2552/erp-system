@@ -169,12 +169,16 @@ export class ApiService {
     return this.http.get<PagedResult<AttendanceRecord>>(`${this.baseUrl}/attendance/today`, { params });
   }
 
-  checkIn(employeeId: string, remarks?: string): Observable<ApiResponse<AttendanceRecord>> {
-    return this.http.post<ApiResponse<AttendanceRecord>>(`${this.baseUrl}/attendance/check-in`, { employeeId, remarks });
+  checkIn(employeeId: string, remarks?: string, date?: string): Observable<ApiResponse<AttendanceRecord>> {
+    return this.http.post<ApiResponse<AttendanceRecord>>(`${this.baseUrl}/attendance/check-in`, { employeeId, remarks, date });
   }
 
-  checkOut(employeeId: string, remarks?: string): Observable<ApiResponse<AttendanceRecord>> {
-    return this.http.post<ApiResponse<AttendanceRecord>>(`${this.baseUrl}/attendance/check-out`, { employeeId, remarks });
+  checkOut(employeeId: string, remarks?: string, date?: string): Observable<ApiResponse<AttendanceRecord>> {
+    return this.http.post<ApiResponse<AttendanceRecord>>(`${this.baseUrl}/attendance/check-out`, { employeeId, remarks, date });
+  }
+
+  markManualAttendance(data: { employeeId: string; date: string; checkIn: string; checkOut?: string; remarks?: string }): Observable<ApiResponse<AttendanceRecord>> {
+    return this.http.post<ApiResponse<AttendanceRecord>>(`${this.baseUrl}/attendance/manual`, data);
   }
 
   checkInMe(remarks?: string): Observable<ApiResponse<AttendanceRecord>> {

@@ -581,6 +581,16 @@ public class AttendanceService : IAttendanceService
             })
             .ToListAsync();
 
+        var leaveDays = await _db.LeaveRequests
+            .AsNoTracking()
+            .Where(l => l.Status == LeaveStatus.Approved
+                && l.StartDate.Month <= month && l.StartDate.Year <= year
+                && l.EndDate.Month >= month && l.EndDate.Year >= year)
+            .Select(l => new { l.EmployeeId, l.StartDate, l.EndDate })
+            .ToListAsync();
+
+        var daysInMonth = DateTime.DaysInMonth(year, month);
+
         return rows
             .GroupBy(r => new { r.EmployeeId, r.Name, r.Dept })
             .Select(g => new MonthlyAttendanceSummaryDto(
@@ -589,7 +599,24 @@ public class AttendanceService : IAttendanceService
                 g.Key.Dept,
                 g.Count(x => x.IsPresent),
                 g.Count(x => x.IsLateArrival),
-                g.Sum(x => x.WorkingHours ?? 0)))
+                g.Sum(x => x.WorkingHours ?? 0),
+                Math.Round(g.Sum(x => Math.Max(0, (x.WorkingHours ?? 0) - 8)), 2),
+                leaveDays
+                    .Where(l => l.EmployeeId == g.Key.EmployeeId)
+                    .Sum(l =>
+                    {
+                        var from = l.StartDate;
+                        var to = l.EndDate;
+                        if (from.Year == year && from.Month < month) from = new DateOnly(year, month, 1);
+                        if (to.Year == year && to.Month > month) to = new DateOnly(year, month, daysInMonth);
+                        if (from.Year < year) from = new DateOnly(year, month, 1);
+                        if (to.Year > year) to = new DateOnly(year, month, daysInMonth);
+                        var count = 0;
+                        for (var d = from; d <= to; d = d.AddDays(1))
+                            if (d.DayOfWeek != DayOfWeek.Saturday && d.DayOfWeek != DayOfWeek.Sunday)
+                                count++;
+                        return count;
+                    })))
             .OrderBy(r => r.EmployeeName)
             .ToList();
     }
@@ -635,7 +662,7 @@ public class AttendanceService : IAttendanceService
         if (!employeeExists)
             return ApiResponse<AttendanceDto>.Fail("Employee not found. Please create an employee profile first.");
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = dto.Date ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var existing = await _db.Attendances.FirstOrDefaultAsync(a => a.EmployeeId == dto.EmployeeId && a.AttendanceDate == today);
 
         var nowTime = TimeOnly.FromDateTime(DateTime.UtcNow);
@@ -686,7 +713,7 @@ public class AttendanceService : IAttendanceService
         if (!employeeExists)
             return ApiResponse<AttendanceDto>.Fail("Employee not found. Please create an employee profile first.");
 
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = dto.Date ?? DateOnly.FromDateTime(DateTime.UtcNow);
         var existing = await _db.Attendances.Include(a => a.Employee)
             .FirstOrDefaultAsync(a => a.EmployeeId == dto.EmployeeId && a.AttendanceDate == today);
 
@@ -748,6 +775,66 @@ public class AttendanceService : IAttendanceService
         }
         await _db.SaveChangesAsync();
         return ApiResponse<string>.Ok("Attendance marked successfully");
+    }
+
+    public async Task<ApiResponse<AttendanceDto>> ManualEntryAsync(ManualAttendanceDto dto)
+    {
+        if (!TimeOnly.TryParse(dto.CheckIn, out var checkIn))
+            return ApiResponse<AttendanceDto>.Fail("Invalid Check-In time. Use HH:mm format.");
+
+        TimeOnly? checkOut = null;
+        if (!string.IsNullOrWhiteSpace(dto.CheckOut))
+        {
+            if (!TimeOnly.TryParse(dto.CheckOut, out var parsedOut))
+                return ApiResponse<AttendanceDto>.Fail("Invalid Check-Out time. Use HH:mm format.");
+            checkOut = parsedOut;
+        }
+
+        var existing = await _db.Attendances.Include(a => a.Employee)
+            .FirstOrDefaultAsync(a => a.EmployeeId == dto.EmployeeId && a.AttendanceDate == dto.Date);
+
+        double? hours = null;
+        if (checkOut.HasValue && checkOut.Value > checkIn)
+            hours = Math.Round((checkOut.Value - checkIn).TotalHours, 2);
+
+        Attendance att;
+        if (existing != null)
+        {
+            existing.CheckInTime = checkIn;
+            existing.CheckOutTime = checkOut;
+            existing.WorkingHours = hours ?? existing.WorkingHours;
+            existing.IsPresent = true;
+            existing.IsLateArrival = checkIn > new TimeOnly(9, 30);
+            existing.Remarks = dto.Remarks ?? "Corrected by HR";
+            existing.UpdatedAt = DateTime.UtcNow;
+            att = existing;
+        }
+        else
+        {
+            att = new Attendance
+            {
+                EmployeeId = dto.EmployeeId,
+                AttendanceDate = dto.Date,
+                CheckInTime = checkIn,
+                CheckOutTime = checkOut,
+                WorkingHours = hours,
+                IsPresent = true,
+                IsLateArrival = checkIn > new TimeOnly(9, 30),
+                Remarks = dto.Remarks ?? "Manual entry by HR"
+            };
+            _db.Attendances.Add(att);
+        }
+
+        await _db.SaveChangesAsync();
+
+        if (existing == null)
+            att = await _db.Attendances.AsNoTracking().Include(a => a.Employee).FirstAsync(x => x.Id == att.Id);
+
+        return ApiResponse<AttendanceDto>.Ok(new AttendanceDto(
+            att.Id, att.EmployeeId, $"{att.Employee.FirstName} {att.Employee.LastName}",
+            att.AttendanceDate, att.CheckInTime, att.CheckOutTime,
+            att.WorkingHours, att.IsPresent, att.IsLateArrival, att.Remarks
+        ), "Attendance entry saved");
     }
 }
 

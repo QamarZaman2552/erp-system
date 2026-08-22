@@ -116,7 +116,7 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
       <div class="erp-table-container">
         <table class="erp-table">
           <thead>
-            <tr><th>Employee</th><th>Department</th><th>Present Days</th><th>Late Days</th><th>Total Hours</th></tr>
+            <tr><th>Employee</th><th>Department</th><th>Present Days</th><th>Late Days</th><th>Leaves</th><th>Total Hours</th><th>Overtime</th></tr>
           </thead>
           <tbody>
             @for (r of monthlyReport(); track r.employeeId) {
@@ -125,12 +125,37 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
                 <td><span class="badge badge-info">{{ r.departmentName }}</span></td>
                 <td>{{ r.presentDays }}</td>
                 <td>{{ r.lateDays }}</td>
+                <td>{{ r.leaveDays }}</td>
                 <td>{{ r.totalHours }} hrs</td>
+                <td [class.text-success]="r.overtimeHours > 0">{{ r.overtimeHours > 0 ? '+' + r.overtimeHours + ' hrs' : '—' }}</td>
               </tr>
             }
             <tr *ngIf="monthlyReport().length === 0">
-              <td colspan="5" class="text-center py-8 text-gray-400">No attendance data for this month.</td>
+              <td colspan="7" class="text-center py-8 text-gray-400">No attendance data for this month.</td>
             </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Department-wise Comparison -->
+      <div class="erp-card p-3 mt-3">
+        <h5 class="h6 mb-3">🏢 Department-wise Comparison ({{ monthNames[reportMonth - 1] }} {{ reportYear }})</h5>
+        <table class="erp-table">
+          <thead>
+            <tr><th>Department</th><th class="text-center">Employees</th><th class="text-center">Present Days</th><th class="text-center">Late Days</th><th class="text-center">Leave Days</th><th class="text-center">Total Hours</th><th class="text-center">Overtime Hrs</th></tr>
+          </thead>
+          <tbody>
+            @for (d of deptComparison(); track d.dept) {
+              <tr>
+                <td class="font-semibold"><span class="badge badge-info">{{ d.dept }}</span></td>
+                <td class="text-center">{{ d.employees }}</td>
+                <td class="text-center">{{ d.present }}</td>
+                <td class="text-center">{{ d.late }}</td>
+                <td class="text-center">{{ d.leaves }}</td>
+                <td class="text-center">{{ d.hours }}</td>
+                <td class="text-center">{{ d.overtime }}</td>
+              </tr>
+            }
           </tbody>
         </table>
       </div>
@@ -204,6 +229,24 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
                   </select>
                 </div>
                 <div class="mb-3">
+                  <label class="form-label small">Date</label>
+                  <input type="date" [(ngModel)]="mark.date" name="mdate" class="form-control" />
+                  <small class="form-hint">Backdated entries allowed (missed punch correction).</small>
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <label class="form-label small">Check-In Time (HH:mm)</label>
+                    <input type="time" [(ngModel)]="mark.checkIn" name="mcin" class="form-control" />
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label small">Check-Out Time (HH:mm)</label>
+                    <input type="time" [(ngModel)]="mark.checkOut" name="mcout" class="form-control" />
+                  </div>
+                </div>
+                <div class="alert alert-info py-2 small mb-3" *ngIf="mark.checkIn && mark.checkOut">
+                  <i class="bi bi-magic me-1"></i>Both times filled → saves as a <strong>full corrected entry</strong> (auto hours &amp; late flag). Otherwise use the punch buttons below.
+                </div>
+                <div class="mb-3">
                   <label class="form-label small">Remarks</label>
                   <input type="text" [(ngModel)]="mark.remarks" name="rem" class="form-control"
                          placeholder="e.g. Manual entry by HR" />
@@ -211,6 +254,9 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
               </div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" (click)="showMarkModal.set(false)">Cancel</button>
+                <button type="button" class="btn btn-warning" [disabled]="saving() || !mark.employeeId || !mark.checkIn" (click)="submitManualEntry()">
+                  <i class="bi bi-pencil-square me-1"></i> Save Full Entry
+                </button>
                 <button type="button" class="btn btn-success" [disabled]="saving() || !mark.employeeId" (click)="submitMark('in')">
                   <i class="bi bi-box-arrow-in-right me-1"></i> Check In
                 </button>
@@ -306,7 +352,7 @@ export class AttendanceComponent implements OnInit {
   showMarkModal = signal(false);
   saving = signal(false);
 
-  mark = { employeeId: null as string | null, remarks: '' };
+  mark = { employeeId: null as string | null, remarks: '', date: new Date().toISOString().split('T')[0], checkIn: '', checkOut: '' };
 
   reportView = signal<'monthly' | 'late' | 'absent' | null>(null);
   monthlyReport = signal<any[]>([]);
@@ -362,7 +408,7 @@ export class AttendanceComponent implements OnInit {
   }
 
   openMarkModal(): void {
-    this.mark = { employeeId: null, remarks: '' };
+    this.mark = { employeeId: null, remarks: '', date: new Date().toISOString().split('T')[0], checkIn: '', checkOut: '' };
     this.showMarkModal.set(true);
     if (this.employees().length === 0) {
       this.api.getEmployees(1, 200).subscribe({
@@ -387,8 +433,8 @@ export class AttendanceComponent implements OnInit {
     this.saving.set(true);
 
     const request$ = action === 'in'
-      ? this.api.checkIn(this.mark.employeeId, this.mark.remarks || 'Manual entry')
-      : this.api.checkOut(this.mark.employeeId, this.mark.remarks || 'Manual entry');
+      ? this.api.checkIn(this.mark.employeeId, this.mark.remarks || 'Manual entry', this.mark.date)
+      : this.api.checkOut(this.mark.employeeId, this.mark.remarks || 'Manual entry', this.mark.date);
 
     request$.subscribe({
       next: (res) => {
@@ -405,5 +451,44 @@ export class AttendanceComponent implements OnInit {
         this.saving.set(false);
       }
     });
+  }
+
+  submitManualEntry(): void {
+    if (!this.mark.employeeId || !this.mark.checkIn) {
+      this.toast.warning('Attendance', 'Employee and check-in time are required.');
+      return;
+    }
+    this.saving.set(true);
+    this.api.markManualAttendance({
+      employeeId: this.mark.employeeId,
+      date: this.mark.date,
+      checkIn: this.mark.checkIn,
+      checkOut: this.mark.checkOut || undefined,
+      remarks: this.mark.remarks || undefined
+    }).subscribe({
+      next: (res) => {
+        this.saving.set(false);
+        this.showMarkModal.set(false);
+        const name = res?.data?.employeeName || 'Employee';
+        this.toast.success('Attendance', `Entry saved for ${name}: ${res?.data?.workingHours ?? 0}h${res?.data?.isLateArrival ? ' (late)' : ''}.`);
+        this.loadToday();
+      },
+      error: () => this.saving.set(false)
+    });
+  }
+
+  deptComparison(): { dept: string; employees: number; present: number; late: number; leaves: number; hours: number; overtime: number }[] {
+    const map = new Map<string, any>();
+    for (const r of this.monthlyReport()) {
+      const cur = map.get(r.departmentName) || { dept: r.departmentName, employees: 0, present: 0, late: 0, leaves: 0, hours: 0, overtime: 0 };
+      cur.employees++;
+      cur.present += r.presentDays;
+      cur.late += r.lateDays;
+      cur.leaves += r.leaveDays ?? 0;
+      cur.hours += r.totalHours ?? 0;
+      cur.overtime += r.overtimeHours ?? 0;
+      map.set(r.departmentName, cur);
+    }
+    return Array.from(map.values());
   }
 }

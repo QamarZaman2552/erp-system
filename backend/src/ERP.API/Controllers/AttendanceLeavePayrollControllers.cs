@@ -48,6 +48,15 @@ public class AttendanceController(
         return Ok(res);
     }
 
+    [HttpPost("manual")]
+    [Authorize(Roles = "Admin,HR")]
+    public async Task<IActionResult> ManualEntry([FromBody] ManualAttendanceDto dto)
+    {
+        var res = await attendanceService.ManualEntryAsync(dto);
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
     [HttpPost("me/check-in")]
     public async Task<IActionResult> CheckInMe([FromBody] SelfAttendanceDto? dto)
     {

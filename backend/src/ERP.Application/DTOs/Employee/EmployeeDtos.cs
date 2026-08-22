@@ -73,9 +73,17 @@ public record AttendanceDto(
     bool IsLateArrival,
     string? Remarks
 );
-public record CheckInDto(Guid EmployeeId, string? Remarks);
+public record CheckInDto(Guid EmployeeId, string? Remarks, DateOnly? Date = null);
 
-public record CheckOutDto(Guid EmployeeId, string? Remarks);
+public record CheckOutDto(Guid EmployeeId, string? Remarks, DateOnly? Date = null);
+
+public record ManualAttendanceDto(
+    Guid EmployeeId,
+    DateOnly Date,
+    string? CheckIn,
+    string? CheckOut,
+    string? Remarks
+);
 
 public record SelfAttendanceDto(string? Remarks);
 
@@ -87,7 +95,9 @@ public record MonthlyAttendanceSummaryDto(
     string DepartmentName,
     int PresentDays,
     int LateDays,
-    double TotalHours
+    double TotalHours,
+    double OvertimeHours,
+    int LeaveDays
 );
 
 public record AbsenteeDto(Guid EmployeeId, string EmployeeCode, string EmployeeName, string DepartmentName);

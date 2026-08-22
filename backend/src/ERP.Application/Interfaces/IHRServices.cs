@@ -44,6 +44,7 @@ public interface IAttendanceService
     Task<ApiResponse<AttendanceDto>> CheckInForCurrentUserAsync(string userId, string? remarks);
     Task<ApiResponse<AttendanceDto>> CheckOutForCurrentUserAsync(string userId, string? remarks);
     Task<ApiResponse<string>> ManualMarkAsync(Guid employeeId, DateOnly date, bool isPresent, string? remarks);
+    Task<ApiResponse<AttendanceDto>> ManualEntryAsync(ManualAttendanceDto dto);
     Task<List<MonthlyAttendanceSummaryDto>> GetMonthlyReportAsync(int month, int year);
     Task<List<AttendanceDto>> GetLateArrivalsAsync(int month, int year);
     Task<List<AbsenteeDto>> GetAbsenteesAsync(DateOnly date);

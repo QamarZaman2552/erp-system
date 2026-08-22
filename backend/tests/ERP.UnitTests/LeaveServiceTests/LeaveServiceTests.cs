@@ -38,7 +38,7 @@ public class LeaveServiceTests : ServiceTestBase
             empId, LeaveType.Annual, start, start.AddDays(4), "Family event"));
 
         Assert.True(result.Success);
-        Assert.Equal(5, result.Data!.TotalDays); // inclusive of both endpoints
+        Assert.Equal(4, result.Data!.TotalDays); // Sep 1-5 2026: Sat/Sun excluded (working days only)
         Assert.Equal(LeaveStatus.Pending, result.Data.Status);
     }
 
@@ -52,7 +52,7 @@ public class LeaveServiceTests : ServiceTestBase
             empId, LeaveType.Sick, new DateOnly(2026, 9, 10), new DateOnly(2026, 9, 5), "Flu"));
 
         Assert.False(result.Success);
-        Assert.Equal("Invalid date range", result.Message);
+        Assert.Equal("Invalid date range (no working days in the selected range).", result.Message);
     }
 
     [Fact]
