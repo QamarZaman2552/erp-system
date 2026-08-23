@@ -5,11 +5,12 @@ import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
+import { ThemeToggleComponent } from './theme-toggle.component';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ThemeToggleComponent],
   template: `
     <header class="header-container">
       <!-- Mobile Menu Toggle -->
@@ -67,6 +68,9 @@ import { UiService } from '../../core/services/ui.service';
             </div>
           </div>
         </div>
+
+        <!-- Theme Toggle -->
+        <app-theme-toggle></app-theme-toggle>
 
         <!-- Admin: System Announcement -->
         <button class="btn btn-sm btn-outline-warning" *ngIf="auth.hasRole(['Admin'])" (click)="announce()" title="Send announcement to all users">

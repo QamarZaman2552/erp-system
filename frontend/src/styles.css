@@ -1,6 +1,7 @@
 /* Bootstrap 5 & Bootstrap Icons */
 @import 'bootstrap/dist/css/bootstrap.min.css';
 @import 'bootstrap-icons/font/bootstrap-icons.css';
+@import './styles-light.css';
 
 :root {
   /* Dark Enterprise Theme */
