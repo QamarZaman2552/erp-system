@@ -49,15 +49,20 @@ npm test             # 7 tests pass
 | Finance Polish | ac17ba2 | transactions date-range+type filter, income/expense/net summary API+KPI cards, approve expense→auto ledger txn + budget SpentAmount update + exceed/80% warning in response, budget alerts endpoint (≥80%), dept-wise + category-wise expense reports, financial report PDF export (annual/quarter/monthly), transactions CSV (Excel) export, payroll generation→auto "Payroll Expense" txn (idempotent ref PAYROLL-YYYY-MM), /finance page: 4 tabs incl Reports tab w/ exports |
 | Notifications | c0f2179 | INotificationService (DB persist via Notification entity + SignalR real-time; hub moved to ERP.Infrastructure.Hubs), APIs: list/unread-count/mark-read/read-all/clear + Admin announce-to-all; events wired: task assigned→assignee users, leave request→HR+Manager+Admin roles, leave approved/rejected→employee (+existing email), SO confirm low-stock→Admins, budget exceeded/80%→Admins; header bell = DB-backed dropdown w/ type icons, unread badge, click→mark read+navigate actionUrl, mark-all-read, clear, 📢 announce button (Admin) |
 | Reports & Analytics | 64d90fd | /dashboard/reports/* 9 endpoints (attendance weekly trends w/ present %, dept employee distribution, project completion progress, leave utilization monthly, payroll cost trend, top employees by tasks completed, inventory valuation by category, customer acquisition monthly, lead funnel stage counts+value); dashboard "Reports & Analytics" section (Admin/HR/Manager) — 9 cards w/ CSS bars/funnel/progress + hover tooltips |
+| Role Permissions | 90e8089 | Access Denied 403 page (role + attempted route shown), authGuard redirects there on role fail, 403 API → error toast; role change UI pehle se tha (/users) |
+| Audit Logs | 570ab62 | IAuditLogService + AuditActionFilter auto-logs every successful POST/PUT/PATCH/DELETE (payload as NewValues, IP+UA captured; auth/notifications excluded), AuthService logs Login/LoginFailed/LoginLockedOut/Logout w/ IP, Admin-only /auditlogs API (filter user/module/date) + CSV export, frontend /audit-logs page (filters, badges, payload modal, pagination, export) — append-only tamper-resistant |
 
 ## BAQI Modules (is order me karo)
-1. **Role-Based Permissions** — roles/guards/sidebar hiding already work. Add: Access Denied page component + route.
-2. **Audit Logs** — ActivityLog entity exists but kuch use nahi hota; add action-filter (Create/Update/Delete logging) + Admin viewer page.
-3. **File Upload** — profile image upload endpoint exists; Document entity exists; generic document module heavy — user se poochho kitna chahiye.
+1. **File Upload** — profile image upload endpoint exists; Document entity exists in DB. USER SE POOCHHO kitna heavy chahiye (local storage vs Azure Blob, versioning, expiry alerts).
 
 ## Notification Skipped Items (user-approved pending)
 - Task deadline reminder (1 day before), overdue task notifications, project deadline reminders → need background job/scheduler
 - HR birthday & probation-end reminders, notification preferences per-type, announcement email broadcast
+
+## Gotchas (new)
+- JWT has NO name claim — CurrentUserService.UserName null hota hai; email fallback use karo
+- 5 wrong passwords = admin account lockout 15 min (Identity lockout). DB unlock: `UPDATE AspNetUsers SET AccessFailedCount=0, LockoutEnd=NULL WHERE Email='admin@company.com'`
+- PS 5.1: `$csv.Content` text/csv already string hota hai (GetString mat lagao); duplicate `-ContentType` param error
 
 ## Technical Gotchas (IMPORTANT)
 - **Enums**: global `JsonStringEnumConverter` laga hai (Program.cs) — input/output dono strings ("Active", "High", "Todo"). Numbers bhi bind hote hain.
