@@ -146,6 +146,17 @@ public interface IDashboardService
     Task<List<MonthlyRevenueDto>> GetMonthlyRevenueAsync(int year);
     Task<List<TopProductDto>> GetTopProductsAsync(int count = 5);
     Task<List<RecentActivityDto>> GetRecentActivitiesAsync(int count = 10);
+
+    // Reports & analytics
+    Task<List<AttendanceTrendDto>> GetAttendanceTrendsAsync(int weeks = 8);
+    Task<List<DeptDistributionDto>> GetDeptDistributionAsync();
+    Task<List<ProjectProgressDto>> GetProjectCompletionAsync();
+    Task<List<LeaveUtilizationDto>> GetLeaveUtilizationAsync(int year);
+    Task<List<PayrollCostTrendDto>> GetPayrollCostTrendAsync(int year);
+    Task<List<TopEmployeeDto>> GetTopEmployeesAsync(int limit = 5);
+    Task<List<InventoryValuationDto>> GetInventoryValuationAsync();
+    Task<List<CustomerAcquisitionDto>> GetCustomerAcquisitionAsync(int year);
+    Task<List<LeadFunnelDto>> GetLeadFunnelAsync();
 }
 
 public interface IInteractionService

@@ -170,3 +170,15 @@ public record DashboardStatsDto(
 public record MonthlyRevenueDto(string Month, decimal Revenue, decimal Expenses);
 public record TopProductDto(string Name, int SoldQuantity, decimal Revenue);
 public record RecentActivityDto(string Description, string UserName, DateTime Timestamp, string Type);
+
+// ─── Reports & Analytics ──────────────────────────────────────────────────────
+
+public record AttendanceTrendDto(string WeekLabel, int PresentDays, double PresentRate);
+public record DeptDistributionDto(string Department, int EmployeeCount);
+public record ProjectProgressDto(string ProjectName, string Status, int Progress);
+public record LeaveUtilizationDto(string Month, int ApprovedLeaveDays);
+public record PayrollCostTrendDto(int Month, decimal TotalCost, int EmployeeCount);
+public record TopEmployeeDto(string EmployeeName, string Department, int TasksCompleted, int TotalAssigned);
+public record InventoryValuationDto(string CategoryName, int ProductCount, int TotalUnits, decimal StockValue);
+public record CustomerAcquisitionDto(string Month, int NewCustomers);
+public record LeadFunnelDto(string Stage, int Count, decimal Value);

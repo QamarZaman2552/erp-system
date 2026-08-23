@@ -123,6 +123,163 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
           </div>
         </div>
       </div>
+
+      <!-- ─── Reports & Analytics Section (Admin/HR/Manager) ─── -->
+      <div *ngIf="canSeeAnalytics()" class="analytics-section">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 style="font-size:18px;margin:0"><i class="bi bi-graph-up-arrow me-2"></i>Reports &amp; Analytics</h3>
+          <span class="badge bg-secondary">{{ reportYear }}</span>
+        </div>
+
+        <div class="row g-3">
+          <!-- Attendance Trends -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-calendar-week me-2 text-info"></i>Attendance Trends (weekly %)</h6>
+              <div class="mini-bars" *ngIf="attendanceTrends().length > 0">
+                <div class="mini-bar-row" *ngFor="let t of attendanceTrends()" [title]="t.weekLabel + ': ' + t.presentRate + '% (' + t.presentDays + ' days)'">
+                  <span class="mini-bar-label">{{ t.weekLabel }}</span>
+                  <div class="mini-bar-track"><div class="mini-bar-fill bg-info" [style.width.%]="t.presentRate"></div></div>
+                  <span class="mini-bar-value">{{ t.presentRate }}%</span>
+                </div>
+              </div>
+              <p class="text-secondary small mb-0" *ngIf="attendanceTrends().length === 0">No attendance data yet</p>
+            </div>
+          </div>
+
+          <!-- Dept Distribution -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-building me-2 text-primary"></i>Department Distribution</h6>
+              <div *ngIf="deptDist().length > 0">
+                <div class="mini-bar-row" *ngFor="let d of deptDist()" [title]="d.department + ': ' + d.employeeCount + ' employees'">
+                  <span class="mini-bar-label">{{ d.department }}</span>
+                  <div class="mini-bar-track"><div class="mini-bar-fill bg-primary" [style.width.%]="pct(d.employeeCount, maxDept())"></div></div>
+                  <span class="mini-bar-value">{{ d.employeeCount }}</span>
+                </div>
+              </div>
+              <p class="text-secondary small mb-0" *ngIf="deptDist().length === 0">No data</p>
+            </div>
+          </div>
+
+          <!-- Lead Funnel -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-filter-square me-2 text-warning"></i>Lead Conversion Funnel</h6>
+              <div *ngIf="leadFunnel().length > 0">
+                <div class="funnel-row" *ngFor="let s of leadFunnel()" [title]="s.stage + ': ' + s.count + ' leads ($' + (s.value | number) + ')'">
+                  <span class="mini-bar-label">{{ s.stage }}</span>
+                  <div class="mini-bar-track">
+                    <div class="mini-bar-fill funnel-fill" [style.width.%]="pct(s.count, funnelMax())"></div>
+                  </div>
+                  <span class="mini-bar-value">{{ s.count }}</span>
+                </div>
+              </div>
+              <p class="text-secondary small mb-0" *ngIf="leadFunnel().length === 0">No leads yet</p>
+            </div>
+          </div>
+
+          <!-- Project Completion -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-kanban me-2 text-success"></i>Project Completion</h6>
+              <div *ngFor="let p of projects()">
+                <div class="d-flex justify-content-between small mb-1">
+                  <span>{{ p.projectName }}</span>
+                  <span class="text-secondary">{{ p.status }} · {{ p.progress }}%</span>
+                </div>
+                <div class="progress mb-2" style="height:6px;">
+                  <div class="progress-bar" [ngClass]="p.progress >= 75 ? 'bg-success' : p.progress >= 40 ? 'bg-warning' : 'bg-primary'" [style.width.%]="p.progress"></div>
+                </div>
+              </div>
+              <p class="text-secondary small mb-0" *ngIf="projects().length === 0">No projects</p>
+            </div>
+          </div>
+
+          <!-- Top Employees -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-trophy me-2 text-warning"></i>Top Performing Employees</h6>
+              <table class="table table-sm table-dark mb-0" *ngIf="topEmployees().length > 0">
+                <thead><tr><th>#</th><th>Employee</th><th>Done</th><th>Total</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let e of topEmployees(); let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ e.employeeName }}<br /><small class="text-secondary">{{ e.department }}</small></td>
+                    <td class="fw-bold text-success">{{ e.tasksCompleted }}</td>
+                    <td>{{ e.totalAssigned }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="text-secondary small mb-0" *ngIf="topEmployees().length === 0">No task data</p>
+            </div>
+          </div>
+
+          <!-- Inventory Valuation -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-box-seam me-2 text-danger"></i>Inventory Valuation</h6>
+              <table class="table table-sm table-dark mb-0" *ngIf="inventoryVal().length > 0">
+                <thead><tr><th>Category</th><th>Units</th><th>Value</th></tr></thead>
+                <tbody>
+                  <tr *ngFor="let v of inventoryVal()">
+                    <td>{{ v.categoryName }}</td>
+                    <td>{{ v.totalUnits }}</td>
+                    <td class="fw-bold text-success">\${{ v.stockValue | number:'1.0-0' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <p class="text-secondary small mb-0" *ngIf="inventoryVal().length === 0">No inventory</p>
+            </div>
+          </div>
+
+          <!-- Payroll Cost Trend -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-cash-stack me-2 text-success"></i>Payroll Cost Trend</h6>
+              <div class="bars-container compact" *ngIf="payrollCosts().length > 0">
+                <div class="bar-col" *ngFor="let p of payrollCosts()" [title]="'Month ' + p.month + ': $' + (p.totalCost | number)">
+                  <div class="bar-visual-group">
+                    <div class="bar bar-revenue" [style.height.%]="pct(p.totalCost, maxPayroll()) || 5"></div>
+                  </div>
+                  <span class="bar-month">{{ p.month }}</span>
+                </div>
+              </div>
+              <p class="text-secondary small mb-0" *ngIf="payrollCosts().length === 0">No payroll processed</p>
+            </div>
+          </div>
+
+          <!-- Leave Utilization -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-airplane me-2 text-primary"></i>Leave Utilization (approved days)</h6>
+              <div class="mini-bars" *ngIf="leaveUtil().length > 0">
+                <div class="mini-bar-row" *ngFor="let l of leaveUtil()" [title]="l.month + ': ' + l.approvedLeaveDays + ' days'">
+                  <span class="mini-bar-label">{{ l.month }}</span>
+                  <div class="mini-bar-track"><div class="mini-bar-fill bg-secondary" [style.width.%]="pct(l.approvedLeaveDays, maxLeave())"></div></div>
+                  <span class="mini-bar-value">{{ l.approvedLeaveDays }}</span>
+                </div>
+              </div>
+              <p class="text-secondary small mb-0" *ngIf="leaveUtil().length === 0">No approved leaves</p>
+            </div>
+          </div>
+
+          <!-- Customer Acquisition -->
+          <div class="col-md-6 col-xl-4">
+            <div class="erp-card p-3 h-100">
+              <h6 class="mb-3"><i class="bi bi-person-plus me-2 text-info"></i>Customer Acquisition {{ reportYear }}</h6>
+              <div *ngIf="custAcq().length > 0">
+                <div class="mini-bar-row" *ngFor="let c of custAcq()" [title]="c.month + ': +' + c.newCustomers + ' customers'">
+                  <span class="mini-bar-label">{{ c.month }}</span>
+                  <div class="mini-bar-track"><div class="mini-bar-fill bg-info" [style.width.%]="pct(c.newCustomers, maxCustAcq())"></div></div>
+                  <span class="mini-bar-value">+{{ c.newCustomers }}</span>
+                </div>
+              </div>
+              <p class="text-secondary small mb-0" *ngIf="custAcq().length === 0">No new customers this year</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -338,6 +495,60 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
       color: var(--text-muted);
       margin-top: 2px;
     }
+
+    .analytics-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .mini-bars {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mini-bar-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 48px;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+
+    .mini-bar-label {
+      color: var(--text-secondary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .mini-bar-track {
+      height: 8px;
+      background: var(--bg-tertiary);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .mini-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.4s ease;
+    }
+
+    .mini-bar-value {
+      text-align: right;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .funnel-fill {
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
+    }
+
+    .bars-container.compact {
+      height: 120px;
+    }
   `]
 })
 export class DashboardComponent implements OnInit {
@@ -362,9 +573,46 @@ export class DashboardComponent implements OnInit {
   ]);
   activities = signal<RecentActivity[]>([]);
 
+  // Analytics
+  attendanceTrends = signal<any[]>([]);
+  deptDist = signal<any[]>([]);
+  projects = signal<any[]>([]);
+  leaveUtil = signal<any[]>([]);
+  payrollCosts = signal<any[]>([]);
+  topEmployees = signal<any[]>([]);
+  inventoryVal = signal<any[]>([]);
+  custAcq = signal<any[]>([]);
+  leadFunnelData = signal<any[]>([]);
+  reportYear = new Date().getFullYear();
+
   ngOnInit(): void {
     this.loadStats();
+    if (this.canSeeAnalytics()) this.loadAnalytics();
   }
+
+  canSeeAnalytics(): boolean {
+    return this.auth.hasRole(['Admin', 'HR', 'Manager']);
+  }
+
+  loadAnalytics(): void {
+    this.api.attendanceTrends().subscribe({ next: r => this.attendanceTrends.set(r || []), error: () => {} });
+    this.api.deptDistribution().subscribe({ next: r => this.deptDist.set(r || []), error: () => {} });
+    this.api.projectCompletion().subscribe({ next: r => this.projects.set(r || []), error: () => {} });
+    this.api.leaveUtilization(this.reportYear).subscribe({ next: r => this.leaveUtil.set(r || []), error: () => {} });
+    this.api.payrollCost(this.reportYear).subscribe({ next: r => this.payrollCosts.set(r || []), error: () => {} });
+    this.api.topEmployees(5).subscribe({ next: r => this.topEmployees.set(r || []), error: () => {} });
+    this.api.inventoryValuation().subscribe({ next: r => this.inventoryVal.set(r || []), error: () => {} });
+    this.api.customerAcquisition(this.reportYear).subscribe({ next: r => this.custAcq.set(r || []), error: () => {} });
+    this.api.leadFunnel().subscribe({ next: r => this.leadFunnelData.set(r || []), error: () => {} });
+  }
+
+  leadFunnel() { return this.leadFunnelData(); }
+  pct(val: number, max: number): number { return max > 0 ? Math.max(2, Math.round(val * 100 / max)) : 0; }
+  maxDept(): number { return Math.max(...this.deptDist().map(d => d.employeeCount), 1); }
+  funnelMax(): number { return Math.max(...this.leadFunnelData().map(s => s.count), 1); }
+  maxPayroll(): number { return Math.max(...this.payrollCosts().map(p => p.totalCost), 1); }
+  maxLeave(): number { return Math.max(...this.leaveUtil().map(l => l.approvedLeaveDays), 1); }
+  maxCustAcq(): number { return Math.max(...this.custAcq().map(c => c.newCustomers), 1); }
 
   loadStats(): void {
     this.api.getDashboardStats().subscribe({

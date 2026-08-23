@@ -1867,6 +1867,154 @@ public class DashboardService : IDashboardService
 
         return activities.OrderByDescending(a => a.Timestamp).Take(count).ToList();
     }
+
+    public async Task<List<AttendanceTrendDto>> GetAttendanceTrendsAsync(int weeks = 8)
+    {
+        var today = DateTime.UtcNow.Date;
+        var start = today.AddDays(-(int)today.DayOfWeek - 7 * (weeks - 1) + 1); // go back to Sunday of (weeks-1) ago
+        if (start > today) start = start.AddDays(-7);
+
+        var rows = await _db.Attendances.AsNoTracking()
+            .Where(a => a.AttendanceDate >= DateOnly.FromDateTime(start))
+            .Select(a => new { a.AttendanceDate, a.IsPresent })
+            .ToListAsync();
+
+        var trends = new List<AttendanceTrendDto>();
+        for (var w = 0; w < weeks; w++)
+        {
+            var weekStart = start.AddDays(w * 7);
+            var weekEnd = weekStart.AddDays(6);
+            var inWeek = rows.Where(r => r.AttendanceDate >= DateOnly.FromDateTime(weekStart) && r.AttendanceDate <= DateOnly.FromDateTime(weekEnd)).ToList();
+            var present = inWeek.Count(r => r.IsPresent);
+            trends.Add(new AttendanceTrendDto(
+                $"{weekStart:dd MMM}",
+                present,
+                inWeek.Count > 0 ? Math.Round(present * 100.0 / inWeek.Count, 1) : 0));
+        }
+        return trends;
+    }
+
+    public async Task<List<DeptDistributionDto>> GetDeptDistributionAsync()
+    {
+        var rows = await _db.Employees.AsNoTracking()
+            .Where(e => !e.IsDeleted)
+            .Select(e => new { DeptName = e.Department.Name })
+            .ToListAsync();
+
+        return rows.GroupBy(r => r.DeptName)
+            .Select(g => new DeptDistributionDto(g.Key, g.Count()))
+            .OrderByDescending(d => d.EmployeeCount)
+            .ToList();
+    }
+
+    public async Task<List<ProjectProgressDto>> GetProjectCompletionAsync()
+    {
+        return await _db.Projects.AsNoTracking()
+            .Where(p => !p.IsDeleted)
+            .OrderBy(p => p.Name)
+            .Select(p => new ProjectProgressDto(p.Name, p.Status.ToString(), p.Progress))
+            .ToListAsync();
+    }
+
+    public async Task<List<LeaveUtilizationDto>> GetLeaveUtilizationAsync(int year)
+    {
+        var rows = await _db.LeaveRequests.AsNoTracking()
+            .Where(l => l.Status == LeaveStatus.Approved && l.StartDate.Year == year)
+            .Select(l => new { l.StartDate.Month, l.TotalDays })
+            .ToListAsync();
+
+        var monthNames = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        return Enumerable.Range(1, 12)
+            .Select(m => new LeaveUtilizationDto(monthNames[m - 1], rows.Where(r => r.Month == m).Sum(r => r.TotalDays)))
+            .ToList();
+    }
+
+    public async Task<List<PayrollCostTrendDto>> GetPayrollCostTrendAsync(int year)
+    {
+        var rows = await _db.PayrollRecords.AsNoTracking()
+            .Where(p => p.Year == year && p.Status != PayrollStatus.Failed)
+            .Select(p => new { p.Month, p.NetSalary })
+            .ToListAsync();
+
+        return Enumerable.Range(1, 12)
+            .Select(m => new PayrollCostTrendDto(
+                m,
+                rows.Where(r => r.Month == m).Sum(r => r.NetSalary),
+                rows.Count(r => r.Month == m)))
+            .Where(r => r.TotalCost > 0 || r.EmployeeCount > 0)
+            .ToList();
+    }
+
+    public async Task<List<TopEmployeeDto>> GetTopEmployeesAsync(int limit = 5)
+    {
+        var assignments = await _db.TaskAssignments.AsNoTracking()
+            .Where(a => !a.Task.IsDeleted)
+            .Select(a => new
+            {
+                a.EmployeeId,
+                Name = a.Employee.FirstName + " " + a.Employee.LastName,
+                Dept = a.Employee.Department.Name,
+                IsDone = a.Task.Status == ERP.Domain.Enums.TaskStatus.Done
+            })
+            .ToListAsync();
+
+        return assignments.GroupBy(a => a.EmployeeId)
+            .Select(g =>
+            {
+                var first = g.First();
+                return new TopEmployeeDto(first.Name, first.Dept, g.Count(x => x.IsDone), g.Count());
+            })
+            .OrderByDescending(t => t.TasksCompleted)
+            .ThenByDescending(t => t.TotalAssigned)
+            .Take(limit)
+            .ToList();
+    }
+
+    public async Task<List<InventoryValuationDto>> GetInventoryValuationAsync()
+    {
+        var products = await _db.Products.AsNoTracking()
+            .Where(p => !p.IsDeleted)
+            .Select(p => new { Category = p.Category.Name, p.CurrentStock, Value = p.CurrentStock * p.CostPrice })
+            .ToListAsync();
+
+        return products.GroupBy(p => p.Category)
+            .Select(g => new InventoryValuationDto(
+                g.Key,
+                g.Count(),
+                g.Sum(x => x.CurrentStock),
+                g.Sum(x => x.Value)))
+            .OrderByDescending(v => v.StockValue)
+            .ToList();
+    }
+
+    public async Task<List<CustomerAcquisitionDto>> GetCustomerAcquisitionAsync(int year)
+    {
+        var rows = await _db.Customers.AsNoTracking()
+            .IgnoreQueryFilters()
+            .Where(c => c.CreatedAt.Year == year)
+            .Select(c => new { c.CreatedAt.Month })
+            .ToListAsync();
+
+        var monthNames = new[] { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
+        return monthNames.Select((name, i) => new CustomerAcquisitionDto(name, rows.Count(r => r.Month == i + 1)))
+            .Where(r => r.NewCustomers > 0)
+            .ToList();
+    }
+
+    public async Task<List<LeadFunnelDto>> GetLeadFunnelAsync()
+    {
+        var stages = new[] { LeadStatus.New, LeadStatus.Contacted, LeadStatus.Qualified, LeadStatus.Proposal, LeadStatus.Negotiation, LeadStatus.Won };
+        var rows = await _db.Leads.AsNoTracking()
+            .Where(l => !l.IsDeleted)
+            .Select(l => new { l.Status, l.EstimatedValue })
+            .ToListAsync();
+
+        return stages.Select(s => new LeadFunnelDto(
+                s.ToString(),
+                rows.Count(r => r.Status == s),
+                rows.Where(r => r.Status == s).Sum(r => r.EstimatedValue)))
+            .ToList();
+    }
 }
 
 public class InteractionService : IInteractionService

@@ -59,6 +59,43 @@ export class ApiService {
     return this.http.get<RecentActivity[]>(`${this.baseUrl}/dashboard/recent-activities`);
   }
 
+  // ─── Reports & Analytics ───────────────────────────────────────────────────
+  attendanceTrends(weeks = 8): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/attendance-trends?weeks=${weeks}`);
+  }
+
+  deptDistribution(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/dept-distribution`);
+  }
+
+  projectCompletion(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/project-completion`);
+  }
+
+  leaveUtilization(year?: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/leave-utilization${year ? '?year=' + year : ''}`);
+  }
+
+  payrollCost(year?: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/payroll-cost${year ? '?year=' + year : ''}`);
+  }
+
+  topEmployees(limit = 5): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/top-employees?limit=${limit}`);
+  }
+
+  inventoryValuation(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/inventory-valuation`);
+  }
+
+  customerAcquisition(year?: number): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/customer-acquisition${year ? '?year=' + year : ''}`);
+  }
+
+  leadFunnel(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/lead-funnel`);
+  }
+
   // ─── Employees ─────────────────────────────────────────────────────────────
   getEmployees(page = 1, pageSize = 10, search = '', departmentId?: string, status?: number | null): Observable<PagedResult<Employee>> {
     let params = new HttpParams()

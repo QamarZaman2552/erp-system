@@ -486,6 +486,44 @@ public class DashboardController : ControllerBase
         var list = await _dashboardService.GetRecentActivitiesAsync();
         return Ok(list);
     }
+
+    // ─── Reports & Analytics ──────────────────────────────────────────────────
+
+    [HttpGet("reports/attendance-trends")]
+    public async Task<IActionResult> AttendanceTrends([FromQuery] int weeks = 8)
+        => Ok(await _dashboardService.GetAttendanceTrendsAsync(weeks));
+
+    [HttpGet("reports/dept-distribution")]
+    public async Task<IActionResult> DeptDistribution()
+        => Ok(await _dashboardService.GetDeptDistributionAsync());
+
+    [HttpGet("reports/project-completion")]
+    public async Task<IActionResult> ProjectCompletion()
+        => Ok(await _dashboardService.GetProjectCompletionAsync());
+
+    [HttpGet("reports/leave-utilization")]
+    public async Task<IActionResult> LeaveUtilization([FromQuery] int year = 0)
+        => Ok(await _dashboardService.GetLeaveUtilizationAsync(year == 0 ? DateTime.UtcNow.Year : year));
+
+    [HttpGet("reports/payroll-cost")]
+    public async Task<IActionResult> PayrollCost([FromQuery] int year = 0)
+        => Ok(await _dashboardService.GetPayrollCostTrendAsync(year == 0 ? DateTime.UtcNow.Year : year));
+
+    [HttpGet("reports/top-employees")]
+    public async Task<IActionResult> TopEmployees([FromQuery] int limit = 5)
+        => Ok(await _dashboardService.GetTopEmployeesAsync(limit));
+
+    [HttpGet("reports/inventory-valuation")]
+    public async Task<IActionResult> InventoryValuation()
+        => Ok(await _dashboardService.GetInventoryValuationAsync());
+
+    [HttpGet("reports/customer-acquisition")]
+    public async Task<IActionResult> CustomerAcquisition([FromQuery] int year = 0)
+        => Ok(await _dashboardService.GetCustomerAcquisitionAsync(year == 0 ? DateTime.UtcNow.Year : year));
+
+    [HttpGet("reports/lead-funnel")]
+    public async Task<IActionResult> LeadFunnel()
+        => Ok(await _dashboardService.GetLeadFunnelAsync());
 }
 
 [ApiController]
