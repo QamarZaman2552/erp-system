@@ -51,13 +51,14 @@ npm test             # 7 tests pass
 | Reports & Analytics | 64d90fd | /dashboard/reports/* 9 endpoints (attendance weekly trends w/ present %, dept employee distribution, project completion progress, leave utilization monthly, payroll cost trend, top employees by tasks completed, inventory valuation by category, customer acquisition monthly, lead funnel stage counts+value); dashboard "Reports & Analytics" section (Admin/HR/Manager) — 9 cards w/ CSS bars/funnel/progress + hover tooltips |
 | Role Permissions | 90e8089 | Access Denied 403 page (role + attempted route shown), authGuard redirects there on role fail, 403 API → error toast; role change UI pehle se tha (/users) |
 | Audit Logs | 570ab62 | IAuditLogService + AuditActionFilter auto-logs every successful POST/PUT/PATCH/DELETE (payload as NewValues, IP+UA captured; auth/notifications excluded), AuthService logs Login/LoginFailed/LoginLockedOut/Logout w/ IP, Admin-only /auditlogs API (filter user/module/date) + CSV export, frontend /audit-logs page (filters, badges, payload modal, pagination, export) — append-only tamper-resistant |
+| Documents | e3c99b5 | IDocumentService: upload to wwwroot/uploads/{entityType}/ (PDF/JPG/PNG/DOCX, 5MB limit), attach to any entity, name search, download via auth'd blob endpoint, delete (uploader/Admin only), expiry date + /documents/expiring endpoint; auto-audited by AuditActionFilter; frontend /documents page (upload modal w/ employee quick-pick, expiring banner, search, preview/download/delete) |
 
-## BAQI Modules (is order me karo)
-1. **File Upload** — profile image upload endpoint exists; Document entity exists in DB. USER SE POOCHHO kitna heavy chahiye (local storage vs Azure Blob, versioning, expiry alerts).
+## ✅ SAARE MODULES COMPLETE — project feature-complete per user's original requirement list
 
 ## Notification Skipped Items (user-approved pending)
 - Task deadline reminder (1 day before), overdue task notifications, project deadline reminders → need background job/scheduler
 - HR birthday & probation-end reminders, notification preferences per-type, announcement email broadcast
+- File versioning/replace, sensitive-doc permission model, Azure Blob migration (local storage in use), scheduled report emails
 
 ## Gotchas (new)
 - JWT has NO name claim — CurrentUserService.UserName null hota hai; email fallback use karo
