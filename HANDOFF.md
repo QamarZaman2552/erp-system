@@ -48,12 +48,12 @@ npm test             # 7 tests pass
 | Sales & Purchase | 75e29a5 | SO/PO lifecycle (confirm→stock deduct/restore, cancel, return+refund), Payment entity (full/partial, auto Partial/Paid status, auto finance Income/Expense txns), PO receive partial/full→inventory auto-add→auto-Delivered, supplier invoice #, invoice PDF (SimplePdfGenerator, no deps) + email w/ attachment, overdue reminders endpoint, sales reports (monthly/customer/product-wise), purchase reports (monthly/supplier-wise), /purchase page + upgraded /sales page w/ actions+reports |
 | Finance Polish | ac17ba2 | transactions date-range+type filter, income/expense/net summary API+KPI cards, approve expense→auto ledger txn + budget SpentAmount update + exceed/80% warning in response, budget alerts endpoint (≥80%), dept-wise + category-wise expense reports, financial report PDF export (annual/quarter/monthly), transactions CSV (Excel) export, payroll generation→auto "Payroll Expense" txn (idempotent ref PAYROLL-YYYY-MM), /finance page: 4 tabs incl Reports tab w/ exports |
 | Notifications | c0f2179 | INotificationService (DB persist via Notification entity + SignalR real-time; hub moved to ERP.Infrastructure.Hubs), APIs: list/unread-count/mark-read/read-all/clear + Admin announce-to-all; events wired: task assigned→assignee users, leave request→HR+Manager+Admin roles, leave approved/rejected→employee (+existing email), SO confirm low-stock→Admins, budget exceeded/80%→Admins; header bell = DB-backed dropdown w/ type icons, unread badge, click→mark read+navigate actionUrl, mark-all-read, clear, 📢 announce button (Admin) |
+| Reports & Analytics | 64d90fd | /dashboard/reports/* 9 endpoints (attendance weekly trends w/ present %, dept employee distribution, project completion progress, leave utilization monthly, payroll cost trend, top employees by tasks completed, inventory valuation by category, customer acquisition monthly, lead funnel stage counts+value); dashboard "Reports & Analytics" section (Admin/HR/Manager) — 9 cards w/ CSS bars/funnel/progress + hover tooltips |
 
 ## BAQI Modules (is order me karo)
-1. **Reports & Analytics** — dashboard KPIs/charts exist; finance reports done. Add: attendance trends, top employees (task counts), lead funnel, inventory valuation.
-2. **Role-Based Permissions** — roles/guards/sidebar hiding already work. Add: Access Denied page component + route.
-3. **Audit Logs** — ActivityLog entity exists but kuch use nahi hota; add action-filter (Create/Update/Delete logging) + Admin viewer page.
-4. **File Upload** — profile image upload endpoint exists; Document entity exists; generic document module heavy — user se poochho kitna chahiye.
+1. **Role-Based Permissions** — roles/guards/sidebar hiding already work. Add: Access Denied page component + route.
+2. **Audit Logs** — ActivityLog entity exists but kuch use nahi hota; add action-filter (Create/Update/Delete logging) + Admin viewer page.
+3. **File Upload** — profile image upload endpoint exists; Document entity exists; generic document module heavy — user se poochho kitna chahiye.
 
 ## Notification Skipped Items (user-approved pending)
 - Task deadline reminder (1 day before), overdue task notifications, project deadline reminders → need background job/scheduler
