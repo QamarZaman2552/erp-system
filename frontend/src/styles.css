@@ -598,9 +598,10 @@ select.ng-invalid.ng-touched {
   white-space: nowrap;
 }
 
-/* Header responsive behaviour */
+/* Header responsive behaviour
+   NOTE: tripled class = specificity boost to beat Angular scoped component styles */
 @media (max-width: 991.98px) {
-  .header-container {
+  .header-container.header-container.header-container {
     height: auto;
     min-height: 64px;
     flex-wrap: wrap;
@@ -621,11 +622,15 @@ select.ng-invalid.ng-touched {
 }
 
 @media (max-width: 767.98px) {
-  /* Compact controls on small screens */
+  /* Icon-only compact buttons — labels hidden */
+  .header-actions .btn-label {
+    display: none;
+  }
+
   .header-actions .btn,
   .header-actions .icon-btn {
-    font-size: 13px;
-    padding: 7px 12px;
+    font-size: 15px;
+    padding: 8px 11px;
   }
 
   .search-box .search-input {
