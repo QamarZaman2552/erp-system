@@ -11,6 +11,10 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
       if (req.url.includes('/auth/logout')) {
         return throwError(() => error);
       }
+      if (error?.status === 403) {
+        toast.show('Access Denied', 'You don\'t have permission for this action', 'error');
+        return throwError(() => error);
+      }
       if (error instanceof Object && 'status' in error) {
         toast.showHttpError(error);
       }

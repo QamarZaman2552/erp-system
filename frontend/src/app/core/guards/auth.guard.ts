@@ -10,7 +10,7 @@ export const authGuard: CanActivateFn = (route, state) => {
     const requiredRoles = route.data?.['roles'] as string[] | undefined;
     if (requiredRoles && requiredRoles.length > 0) {
       if (!authService.hasRole(requiredRoles)) {
-        router.navigate(['/dashboard']);
+        router.navigate(['/access-denied'], { queryParams: { attempted: state.url } });
         return false;
       }
     }

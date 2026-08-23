@@ -12,6 +12,10 @@ export const routes: Routes = [
     loadComponent: () => import('./modules/auth/login.component').then(m => m.LoginComponent)
   },
   {
+    path: 'access-denied',
+    loadComponent: () => import('./modules/access-denied/access-denied.component').then(m => m.AccessDeniedComponent)
+  },
+  {
     path: 'dashboard',
     canActivate: [authGuard],
     loadComponent: () => import('./modules/dashboard/dashboard.component').then(m => m.DashboardComponent)
