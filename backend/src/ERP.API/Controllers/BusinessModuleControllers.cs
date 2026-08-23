@@ -603,9 +603,10 @@ public class DocumentsController(
     ICurrentUserService currentUser) : ControllerBase
 {
     [HttpPost]
-    public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] string entityType,
+    public async Task<IActionResult> Upload([FromForm] string entityType,
         [FromForm] string entityId, [FromForm] DateTime? expiryDate)
     {
+        var file = Request.Form.Files.FirstOrDefault();
         if (file == null || file.Length == 0) return BadRequest(new { success = false, message = "No file provided" });
 
         var res = await documentService.UploadAsync(file.OpenReadStream(), file.FileName, file.Length,
