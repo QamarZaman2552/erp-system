@@ -55,11 +55,11 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
             <td>{{ att.attendanceDate }}</td>
             <td class="font-semibold">{{ att.employeeName }}</td>
             <td>
-              <span class="font-mono text-emerald-400" *ngIf="att.checkInTime">{{ att.checkInTime }}</span>
+              <span class="font-mono text-emerald-400" *ngIf="att.checkInTime">{{ fmtTime(att.checkInTime) }}</span>
               <span class="text-gray-500" *ngIf="!att.checkInTime">—</span>
             </td>
             <td>
-              <span class="font-mono text-indigo-400" *ngIf="att.checkOutTime">{{ att.checkOutTime }}</span>
+              <span class="font-mono text-indigo-400" *ngIf="att.checkOutTime">{{ fmtTime(att.checkOutTime) }}</span>
               <span class="text-gray-500" *ngIf="!att.checkOutTime">—</span>
             </td>
             <td>
@@ -490,5 +490,12 @@ export class AttendanceComponent implements OnInit {
       map.set(r.departmentName, cur);
     }
     return Array.from(map.values());
+  }
+
+  /** "04:44:49.7751669" → "04:44", keeps already-short values intact */
+  fmtTime(t?: string | null): string {
+    if (!t) return '—';
+    const m = t.match(/^(\d{1,2}):(\d{2})/);
+    return m ? `${m[1].padStart(2, '0')}:${m[2]}` : t;
   }
 }
