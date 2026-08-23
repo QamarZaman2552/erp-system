@@ -150,6 +150,11 @@ public record NotificationDto(Guid Id, string Title, string Message, string Type
     string? ActionUrl, DateTime CreatedAt);
 public record CreateAnnouncementDto(string Title, string Message);
 
+// ─── Audit Logs ───────────────────────────────────────────────────────────────
+
+public record AuditLogDto(Guid Id, string UserId, string UserName, string Action, string EntityType,
+    string? EntityId, string? NewValues, string? IpAddress, DateTime Timestamp);
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 public record DashboardStatsDto(

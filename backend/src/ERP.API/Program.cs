@@ -16,6 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<ValidationActionFilter>();
+    options.Filters.Add<AuditActionFilter>();
 })
 .AddJsonOptions(options =>
 {

@@ -98,6 +98,11 @@ import { UiService } from '../../core/services/ui.service';
           <span class="nav-icon">🛡️</span>
           <span class="nav-text">User Management</span>
         </a>
+
+        <a routerLink="/audit-logs" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessAdmin()">
+          <span class="nav-icon">📜</span>
+          <span class="nav-text">Audit Trail</span>
+        </a>
       </nav>
 
       <!-- User Profile Badge -->

@@ -574,6 +574,29 @@ public class NotificationsController(
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Admin")]
+public class AuditLogsController : ControllerBase
+{
+    private readonly IAuditLogService _auditLogService;
+    public AuditLogsController(IAuditLogService auditLogService) => _auditLogService = auditLogService;
+
+    [HttpGet]
+    public async Task<IActionResult> GetLogs([FromQuery] PaginationParams pagination,
+        [FromQuery] string? userId = null, [FromQuery] string? module = null,
+        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+        => Ok(await _auditLogService.GetLogsAsync(pagination, userId, module, from, to));
+
+    [HttpGet("export-csv")]
+    public async Task<IActionResult> ExportCsv([FromQuery] string? userId = null, [FromQuery] string? module = null,
+        [FromQuery] DateTime? from = null, [FromQuery] DateTime? to = null)
+    {
+        var csv = await _auditLogService.ExportCsvAsync(userId, module, from, to);
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv", $"audit-trail-{DateTime.UtcNow:yyyyMMdd}.csv");
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
 [Authorize]
 public class SuppliersController : ControllerBase
 {

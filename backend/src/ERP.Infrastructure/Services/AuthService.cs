@@ -2,6 +2,7 @@ using ERP.Application.Common;
 using ERP.Application.DTOs.Auth;
 using ERP.Application.Interfaces;
 using ERP.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 
@@ -14,26 +15,58 @@ public class AuthService : IAuthService
     private readonly ITokenService _tokenService;
     private readonly IEmailService _emailService;
     private readonly IConfiguration _config;
+    private readonly Data.AppDbContext _db;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public AuthService(
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         ITokenService tokenService,
         IEmailService emailService,
-        IConfiguration config)
+        IConfiguration config,
+        Data.AppDbContext db,
+        IHttpContextAccessor httpContextAccessor)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _tokenService = tokenService;
         _emailService = emailService;
         _config = config;
+        _db = db;
+        _httpContextAccessor = httpContextAccessor;
+    }
+
+    private string? ClientIp =>
+        _httpContextAccessor.HttpContext?.Connection.RemoteIpAddress?.ToString();
+
+    private async Task WriteLogAsync(string userId, string userName, string action)
+    {
+        try
+        {
+            var ua = _httpContextAccessor.HttpContext?.Request.Headers["User-Agent"].ToString() ?? "";
+            _db.ActivityLogs.Add(new ActivityLog
+            {
+                UserId = userId,
+                UserName = userName,
+                Action = action,
+                EntityType = "Auth",
+                IpAddress = ClientIp,
+                UserAgent = ua.Length > 300 ? ua[..300] : ua,
+                Timestamp = DateTime.UtcNow
+            });
+            await _db.SaveChangesAsync();
+        }
+        catch { /* audit must never break auth */ }
     }
 
     public async Task<ApiResponse<AuthResponseDto>> LoginAsync(LoginDto dto)
     {
         var user = await _userManager.FindByEmailAsync(dto.Email);
         if (user == null || !user.IsActive)
+        {
+            await WriteLogAsync(dto.Email, dto.Email, "LoginFailed (unknown/inactive account)");
             return ApiResponse<AuthResponseDto>.Fail("Invalid credentials.");
+        }
 
         var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, lockoutOnFailure: true);
         if (result.IsLockedOut)
@@ -41,11 +74,15 @@ public class AuthService : IAuthService
             var minutesLeft = user.LockoutEnd.HasValue
                 ? Math.Max(1, (int)Math.Ceiling((user.LockoutEnd.Value - DateTimeOffset.UtcNow).TotalMinutes))
                 : 15;
+            await WriteLogAsync(user.Id, user.UserName ?? user.Email!, $"LoginLockedOut — too many failed attempts");
             return ApiResponse<AuthResponseDto>.Fail(
                 $"Account temporarily locked due to multiple failed attempts. Try again in {minutesLeft} minute(s).");
         }
         if (!result.Succeeded)
+        {
+            await WriteLogAsync(user.Id, user.UserName ?? user.Email!, "LoginFailed (wrong password)");
             return ApiResponse<AuthResponseDto>.Fail("Invalid credentials.");
+        }
 
         var roles = await _userManager.GetRolesAsync(user);
         var accessToken = _tokenService.GenerateAccessToken(user.Id, user.Email!, roles);
@@ -55,6 +92,8 @@ public class AuthService : IAuthService
         user.RefreshTokenExpiry = DateTime.UtcNow.AddDays(7);
         user.LastLoginAt = DateTime.UtcNow;
         await _userManager.UpdateAsync(user);
+
+        await WriteLogAsync(user.Id, user.UserName ?? user.Email!, "Login");
 
         return ApiResponse<AuthResponseDto>.Ok(new AuthResponseDto(
             accessToken, refreshToken, 3600,
@@ -131,6 +170,7 @@ public class AuthService : IAuthService
             user.RefreshToken = null;
             user.RefreshTokenExpiry = null;
             await _userManager.UpdateAsync(user);
+            await WriteLogAsync(user.Id, user.UserName ?? user.Email!, "Logout");
         }
         return ApiResponse<string>.Ok("Logged out successfully.");
     }

@@ -92,6 +92,12 @@ export const routes: Routes = [
     loadComponent: () => import('./modules/users/users.component').then(m => m.UsersComponent)
   },
   {
+    path: 'audit-logs',
+    canActivate: [authGuard],
+    data: { roles: ['Admin'] },
+    loadComponent: () => import('./modules/audit-logs/audit-logs.component').then(m => m.AuditLogsComponent)
+  },
+  {
     path: '**',
     redirectTo: 'dashboard'
   }

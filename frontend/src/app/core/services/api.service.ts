@@ -96,6 +96,27 @@ export class ApiService {
     return this.http.get<any[]>(`${this.baseUrl}/dashboard/reports/lead-funnel`);
   }
 
+  // ─── Audit Logs ────────────────────────────────────────────────────────────
+  getAuditLogs(page = 1, pageSize = 25, filters?: { userId?: string; module?: string; from?: string; to?: string }): Observable<PagedResult<any>> {
+    let params = new HttpParams().set('page', page.toString()).set('pageSize', pageSize.toString());
+    if (filters?.userId) params = params.set('userId', filters.userId);
+    if (filters?.module) params = params.set('module', filters.module);
+    if (filters?.from) params = params.set('from', filters.from);
+    if (filters?.to) params = params.set('to', filters.to);
+    return this.http.get<PagedResult<any>>(`${this.baseUrl}/auditlogs`, { params });
+  }
+
+  auditLogsCsvUrl(filters?: { userId?: string; module?: string; from?: string; to?: string }): string {
+    let url = `${this.baseUrl}/auditlogs/export-csv`;
+    const qs: string[] = [];
+    if (filters?.userId) qs.push(`userId=${encodeURIComponent(filters.userId)}`);
+    if (filters?.module) qs.push(`module=${encodeURIComponent(filters.module)}`);
+    if (filters?.from) qs.push(`from=${filters.from}`);
+    if (filters?.to) qs.push(`to=${filters.to}`);
+    if (qs.length) url += '?' + qs.join('&');
+    return url;
+  }
+
   // ─── Employees ─────────────────────────────────────────────────────────────
   getEmployees(page = 1, pageSize = 10, search = '', departmentId?: string, status?: number | null): Observable<PagedResult<Employee>> {
     let params = new HttpParams()
