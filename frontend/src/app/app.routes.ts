@@ -98,6 +98,11 @@ export const routes: Routes = [
     loadComponent: () => import('./modules/audit-logs/audit-logs.component').then(m => m.AuditLogsComponent)
   },
   {
+    path: 'documents',
+    canActivate: [authGuard],
+    loadComponent: () => import('./modules/documents/documents.component').then(m => m.DocumentsComponent)
+  },
+  {
     path: '**',
     redirectTo: 'dashboard'
   }

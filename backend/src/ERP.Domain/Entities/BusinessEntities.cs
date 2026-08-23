@@ -232,5 +232,6 @@ public class Document : BaseEntity
     public long FileSizeBytes { get; set; }
     public string? EntityType { get; set; }
     public string? EntityId { get; set; }
+    public DateTime? ExpiryDate { get; set; }
     public string? UploadedByUserId { get; set; }
 }

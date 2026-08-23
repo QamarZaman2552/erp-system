@@ -155,6 +155,11 @@ public record CreateAnnouncementDto(string Title, string Message);
 public record AuditLogDto(Guid Id, string UserId, string UserName, string Action, string EntityType,
     string? EntityId, string? NewValues, string? IpAddress, DateTime Timestamp);
 
+// ─── Documents ────────────────────────────────────────────────────────────────
+
+public record DocumentDto(Guid Id, string Name, string FileType, long FileSizeBytes,
+    string? EntityType, string? EntityId, DateTime? ExpiryDate, string? UploadedBy, DateTime CreatedAt);
+
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 public record DashboardStatsDto(

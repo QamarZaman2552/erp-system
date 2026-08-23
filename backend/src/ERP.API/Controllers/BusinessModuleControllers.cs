@@ -598,6 +598,56 @@ public class AuditLogsController : ControllerBase
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+public class DocumentsController(
+    IDocumentService documentService,
+    ICurrentUserService currentUser) : ControllerBase
+{
+    [HttpPost]
+    public async Task<IActionResult> Upload([FromForm] IFormFile file, [FromForm] string entityType,
+        [FromForm] string entityId, [FromForm] DateTime? expiryDate)
+    {
+        if (file == null || file.Length == 0) return BadRequest(new { success = false, message = "No file provided" });
+
+        var res = await documentService.UploadAsync(file.OpenReadStream(), file.FileName, file.Length,
+            entityType, entityId, expiryDate, currentUser.UserId ?? "System");
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination,
+        [FromQuery] string? search = null, [FromQuery] string? entityType = null, [FromQuery] bool mineOnly = false)
+    {
+        var result = await documentService.SearchAsync(pagination, search, entityType,
+            mineOnly ? currentUser.UserId : null);
+        return Ok(result);
+    }
+
+    [HttpGet("expiring")]
+    public async Task<IActionResult> Expiring([FromQuery] int days = 30)
+        => Ok(await documentService.GetExpiringAsync(days));
+
+    [HttpGet("{id:guid}/download")]
+    public async Task<IActionResult> Download(Guid id)
+    {
+        var result = await documentService.DownloadAsync(id);
+        if (result == null) return NotFound(new { success = false, message = "Document not found" });
+        var (content, contentType, name) = result.Value;
+        return File(content, contentType, name);
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id)
+    {
+        var res = await documentService.DeleteAsync(id, currentUser.UserId ?? "", currentUser.IsInRole("Admin"));
+        if (!res.Success) return BadRequest(res);
+        return Ok(res);
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
 public class SuppliersController : ControllerBase
 {
     private readonly ISupplierService _supplierService;

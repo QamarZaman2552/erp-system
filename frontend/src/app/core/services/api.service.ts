@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
@@ -115,6 +115,36 @@ export class ApiService {
     if (filters?.to) qs.push(`to=${filters.to}`);
     if (qs.length) url += '?' + qs.join('&');
     return url;
+  }
+
+  // ─── Documents ─────────────────────────────────────────────────────────────
+  uploadDocument(file: File, entityType: string, entityId: string, expiryDate?: string): Observable<ApiResponse<any>> {
+    const form = new FormData();
+    form.append('file', file);
+    form.append('entityType', entityType);
+    form.append('entityId', entityId);
+    if (expiryDate) form.append('expiryDate', expiryDate);
+    return this.http.post<ApiResponse<any>>(`${this.baseUrl}/documents`, form);
+  }
+
+  getDocuments(page = 1, pageSize = 25, search?: string, entityType?: string, mineOnly = false): Observable<PagedResult<any>> {
+    let params = new HttpParams().set('page', page.toString()).set('pageSize', pageSize.toString());
+    if (search) params = params.set('search', search);
+    if (entityType) params = params.set('entityType', entityType);
+    if (mineOnly) params = params.set('mineOnly', 'true');
+    return this.http.get<PagedResult<any>>(`${this.baseUrl}/documents`, { params });
+  }
+
+  getExpiringDocuments(days = 30): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/documents/expiring?days=${days}`);
+  }
+
+  downloadDocument(id: string): Observable<HttpResponse<Blob>> {
+    return this.http.get(`${this.baseUrl}/documents/${id}/download`, { responseType: 'blob', observe: 'response' });
+  }
+
+  deleteDocument(id: string): Observable<ApiResponse<string>> {
+    return this.http.delete<ApiResponse<string>>(`${this.baseUrl}/documents/${id}`);
   }
 
   // ─── Employees ─────────────────────────────────────────────────────────────

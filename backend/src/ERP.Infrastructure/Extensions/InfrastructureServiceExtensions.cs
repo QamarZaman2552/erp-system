@@ -69,6 +69,7 @@ services.AddScoped<IProductCategoryService, ProductCategoryService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IDocumentService, DocumentService>();
 
         return services;
     }

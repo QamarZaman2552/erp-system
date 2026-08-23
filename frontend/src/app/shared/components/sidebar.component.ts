@@ -103,6 +103,11 @@ import { UiService } from '../../core/services/ui.service';
           <span class="nav-icon">📜</span>
           <span class="nav-text">Audit Trail</span>
         </a>
+
+        <a routerLink="/documents" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
+          <span class="nav-icon">📁</span>
+          <span class="nav-text">Documents</span>
+        </a>
       </nav>
 
       <!-- User Profile Badge -->
