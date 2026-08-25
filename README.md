@@ -21,19 +21,27 @@ A full-stack **Enterprise Resource Planning** suite covering HR, Projects & Task
 - Forgot password / reset / change password flows
 - Fail-safe email service (graceful skip when SMTP is not configured)
 
+### 🛡️ Role-Based Data Scoping (Security Hardening)
+- **Ownership enforcement** — employees can only apply for / cancel their own leave requests; generic check-in/out endpoints are Admin/HR-only (`me/*` endpoints for self-service)
+- **Salary privacy** — `BasicSalary` is stripped from employee list/detail responses for non-Admin/HR callers (task-assignment pickers keep working)
+- **Personal data isolation** — employees see only their own attendance history, sales orders, documents, expense submissions, and tasks; cross-employee IDs return `403`
+- **Management-gated analytics** — finance transactions/reports/budgets, dashboard revenue charts, payroll cost, top-employees and all report endpoints restricted to `Admin, HR, Manager`
+- **Personal dashboard** — employees get their own KPI cards (attendance status, pending leaves, task progress) instead of company-wide financials
+
 ### 👥 Employee Management (HR)
-- Add employees with auto-generated codes (`EMP-0001`, `EMP-0002`…)
+- Add employees with duplicate-proof auto-generated codes (`EMP-0001`, `EMP-0002`…)
 - Optional **auto-created login account** on employee creation
 - Edit profile, department transfer, designation promotion, salary revision
 - Reporting manager assignment (org hierarchy)
-- Terminate employee → linked login account deactivates automatically; reactivate on rehire
+- Terminate **or delete** employee → linked login account deactivates automatically; reactivate on rehire
 - Search by name/email/code + filters by department & status
-- Link/unlink existing user accounts to employee profiles
+- Link/unlink existing user accounts to employee profiles (Admin/HR only)
 
 ### ⏱️ Attendance
 - Check-in / check-out (self-service `me/*` endpoints for logged-in employees)
 - Admin manual mark attendance with late-arrival detection & working-hours calculation
-- Reports: monthly summary per employee, late arrivals, today's absentees
+- **Pakistan Standard Time (UTC+5)** aware — correct check-in times, date rollover and late flag
+- Reports: monthly summary per employee, late arrivals, today's absentees (Admin/HR/Manager)
 
 ### 🌴 Leave Management
 - Apply with leave type, date range, reason — **auto working-days calculation** (weekends excluded)
@@ -78,6 +86,8 @@ A full-stack **Enterprise Resource Planning** suite covering HR, Projects & Task
 ### 🤝 CRM · 📦 Inventory · 🛒 Sales · 💰 Finance
 - Customers & leads pipelines, products & stock movements, sales/purchase orders,
   transactions, expenses, budgets + dashboard KPIs and revenue charts
+- Duplicate-proof order numbering (`SO-YYYY-####`, `PO-YYYY-####`) — safe across deletions
+- Expense submission with ownership tracking; employees see only their own submissions
 
 ---
 
