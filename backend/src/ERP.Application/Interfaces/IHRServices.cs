@@ -37,8 +37,9 @@ public interface IDesignationService
 
 public interface IAttendanceService
 {
+    Task<Guid?> GetEmployeeIdForUserAsync(string userId);
     Task<PagedResult<AttendanceDto>> GetByEmployeeAsync(Guid employeeId, int month, int year, PaginationParams pagination);
-    Task<PagedResult<AttendanceDto>> GetTodayAsync(PaginationParams pagination);
+    Task<PagedResult<AttendanceDto>> GetTodayAsync(PaginationParams pagination, string? filterUserId = null);
     Task<ApiResponse<AttendanceDto>> CheckInAsync(CheckInDto dto);
     Task<ApiResponse<AttendanceDto>> CheckOutAsync(CheckOutDto dto);
     Task<ApiResponse<AttendanceDto>> CheckInForCurrentUserAsync(string userId, string? remarks);
@@ -47,7 +48,7 @@ public interface IAttendanceService
     Task<ApiResponse<AttendanceDto>> ManualEntryAsync(ManualAttendanceDto dto);
     Task<List<MonthlyAttendanceSummaryDto>> GetMonthlyReportAsync(int month, int year);
     Task<List<AttendanceDto>> GetLateArrivalsAsync(int month, int year);
-    Task<List<AbsenteeDto>> GetAbsenteesAsync(DateOnly date);
+    Task<List<AbsenteeDto>> GetAbsenteesAsync(DateOnly? date = null);
 }
 
 public interface ILeaveService

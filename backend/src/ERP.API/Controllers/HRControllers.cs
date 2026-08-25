@@ -23,6 +23,17 @@ public class EmployeesController : ControllerBase
     public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination, [FromQuery] Guid? departmentId, [FromQuery] int? status)
     {
         var result = await _employeeService.GetAllAsync(pagination, departmentId, status);
+
+        // Security: only Admin/HR can see salary data (endpoint stays open for task assignment pickers)
+        if (!_currentUser.IsInRole("Admin") && !_currentUser.IsInRole("HR"))
+            result = new PagedResult<EmployeeDto>
+            {
+                Items = result.Items.Select(e => e with { BasicSalary = 0 }).ToList(),
+                TotalCount = result.TotalCount,
+                Page = result.Page,
+                PageSize = result.PageSize
+            };
+
         return Ok(result);
     }
 
@@ -51,6 +62,7 @@ public class EmployeesController : ControllerBase
     }
 
     [HttpGet("linkable-users")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<IActionResult> GetLinkableUsers()
     {
         var users = await _employeeService.GetLinkableUsersAsync();
@@ -62,6 +74,11 @@ public class EmployeesController : ControllerBase
     {
         var result = await _employeeService.GetByIdAsync(id);
         if (!result.Success) return NotFound(result);
+
+        // Security: only Admin/HR can see salary data
+        if (!_currentUser.IsInRole("Admin") && !_currentUser.IsInRole("HR"))
+            result = ApiResponse<EmployeeDto>.Ok(result.Data! with { BasicSalary = 0 });
+
         return Ok(result);
     }
 

@@ -21,7 +21,8 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
         </div>
       </div>
 
-      <!-- KPI Metric Cards Grid -->
+      <!-- KPI Metric Cards Grid (company-wide: management only) -->
+      @if (canSeeAnalytics()) {
       <div class="metrics-grid">
         <div class="metric-card erp-card">
           <div class="metric-header">
@@ -67,6 +68,54 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
           </div>
         </div>
       </div>
+      } @else {
+      <!-- Personal KPI cards for employees -->
+      <div class="metrics-grid">
+        <div class="metric-card erp-card">
+          <div class="metric-header">
+            <span class="metric-title">Attendance Today</span>
+            <span class="metric-icon">⏰</span>
+          </div>
+          <div class="metric-value">{{ (stats()?.todayAttendance || 0) > 0 ? 'Present' : 'Not marked' }}</div>
+          <div class="metric-footer text-blue-400">
+            Use Clock In / Clock Out from the header
+          </div>
+        </div>
+
+        <div class="metric-card erp-card">
+          <div class="metric-header">
+            <span class="metric-title">My Pending Leaves</span>
+            <span class="metric-icon">🌴</span>
+          </div>
+          <div class="metric-value">{{ stats()?.pendingLeaves || 0 }}</div>
+          <div class="metric-footer text-indigo-400">
+            Awaiting approval
+          </div>
+        </div>
+
+        <div class="metric-card erp-card">
+          <div class="metric-header">
+            <span class="metric-title">My Tasks</span>
+            <span class="metric-icon">📋</span>
+          </div>
+          <div class="metric-value">{{ stats()?.myTasksTotal || 0 }}</div>
+          <div class="metric-footer text-emerald-400">
+            <span>{{ stats()?.myTasksDone || 0 }}</span> completed
+          </div>
+        </div>
+
+        <div class="metric-card erp-card">
+          <div class="metric-header">
+            <span class="metric-title">My Documents</span>
+            <span class="metric-icon">📁</span>
+          </div>
+          <div class="metric-value">—</div>
+          <div class="metric-footer text-blue-400">
+            Manage files in Documents page
+          </div>
+        </div>
+      </div>
+      }
 
       <!-- Content Sections: Charts & Activity Feeds -->
       <div class="analytics-row">
@@ -619,6 +668,8 @@ export class DashboardComponent implements OnInit {
       next: (res) => this.stats.set(res),
       error: () => {}
     });
+
+    if (!this.canSeeAnalytics()) return; // company-wide charts are management-only
 
     this.api.getRevenueChart(new Date().getFullYear()).subscribe({
       next: (res) => {

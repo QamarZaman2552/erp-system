@@ -132,7 +132,7 @@ import { LeaveRequest, Employee } from '../../core/models/erp.models';
           </div>
           <form (ngSubmit)="submitLeave()">
             <div class="modal-body">
-              <div class="mb-3">
+              <div class="mb-3" *ngIf="canPickEmployee()">
                 <label class="form-label small">Employee *</label>
                 <select [(ngModel)]="newLeave.employeeId" name="emp" required class="form-select">
                   <option *ngFor="let e of employees()" [value]="e.id">{{ e.fullName }} ({{ e.departmentName }})</option>
@@ -215,6 +215,8 @@ export class LeavesComponent implements OnInit {
   private api = inject(ApiService);
   private auth = inject(AuthService);
   private notifications = inject(NotificationService);
+
+  canPickEmployee(): boolean { return this.auth.hasRole(['Admin', 'HR', 'Manager']); }
 
   leaves = signal<LeaveRequest[]>([]);
   employees = signal<Employee[]>([]);

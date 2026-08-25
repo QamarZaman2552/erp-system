@@ -96,7 +96,8 @@ public class SalesOrdersController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination)
     {
-        var result = await _salesOrderService.GetAllAsync(pagination);
+        var filterUserId = _currentUser.IsInRole("Employee") ? _currentUser.UserId : null;
+        var result = await _salesOrderService.GetAllAsync(pagination, filterUserId);
         return Ok(result);
     }
 
@@ -365,6 +366,7 @@ public class FinanceController(
 {
 
     [HttpGet("transactions")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> GetTransactions([FromQuery] PaginationParams pagination,
         [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] TransactionType? type)
     {
@@ -373,6 +375,7 @@ public class FinanceController(
     }
 
     [HttpGet("transactions/export-csv")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> ExportCsv([FromQuery] DateTime? from, [FromQuery] DateTime? to)
     {
         var csv = await financeService.ExportTransactionsCsvAsync(from, to);
@@ -380,22 +383,27 @@ public class FinanceController(
     }
 
     [HttpGet("summary")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> GetSummary([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         => Ok(await financeService.GetSummaryAsync(from, to));
 
     [HttpGet("reports/by-department")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> DeptExpenseReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         => Ok(await financeService.GetDepartmentExpenseReportAsync(from, to));
 
     [HttpGet("reports/by-category")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> CategoryExpenseReport([FromQuery] DateTime? from, [FromQuery] DateTime? to)
         => Ok(await financeService.GetCategoryExpenseReportAsync(from, to));
 
     [HttpGet("budgets/alerts")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> BudgetAlerts([FromQuery] int month, [FromQuery] int year)
         => Ok(await financeService.GetBudgetAlertsAsync(month, year));
 
     [HttpGet("reports/export-pdf")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> ExportReportPdf([FromQuery] int year = 0, [FromQuery] int? quarter = null, [FromQuery] int? month = null)
     {
         if (year == 0) year = DateTime.UtcNow.Year;
@@ -435,6 +443,7 @@ public class FinanceController(
     }
 
     [HttpGet("budgets")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> GetBudgets([FromQuery] int month, [FromQuery] int year)
     {
         var list = await financeService.GetBudgetsAsync(month, year);
@@ -456,16 +465,24 @@ public class FinanceController(
 public class DashboardController : ControllerBase
 {
     private readonly IDashboardService _dashboardService;
-    public DashboardController(IDashboardService dashboardService) => _dashboardService = dashboardService;
+    private readonly ICurrentUserService _currentUser;
+    public DashboardController(IDashboardService dashboardService, ICurrentUserService currentUser)
+    {
+        _dashboardService = dashboardService;
+        _currentUser = currentUser;
+    }
 
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
-        var stats = await _dashboardService.GetStatsAsync();
+        var stats = _currentUser.IsInRole("Employee") && !string.IsNullOrEmpty(_currentUser.UserId)
+            ? await _dashboardService.GetPersonalStatsAsync(_currentUser.UserId)
+            : await _dashboardService.GetStatsAsync();
         return Ok(stats);
     }
 
     [HttpGet("revenue-chart")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> GetRevenueChart([FromQuery] int year)
     {
         if (year == 0) year = DateTime.UtcNow.Year;
@@ -474,6 +491,7 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("top-products")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> GetTopProducts()
     {
         var list = await _dashboardService.GetTopProductsAsync();
@@ -481,47 +499,57 @@ public class DashboardController : ControllerBase
     }
 
     [HttpGet("recent-activities")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> GetRecentActivities()
     {
         var list = await _dashboardService.GetRecentActivitiesAsync();
         return Ok(list);
     }
 
-    // ─── Reports & Analytics ──────────────────────────────────────────────────
+    // ─── Reports & Analytics (management only) ────────────────────────────────
 
     [HttpGet("reports/attendance-trends")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> AttendanceTrends([FromQuery] int weeks = 8)
         => Ok(await _dashboardService.GetAttendanceTrendsAsync(weeks));
 
     [HttpGet("reports/dept-distribution")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> DeptDistribution()
         => Ok(await _dashboardService.GetDeptDistributionAsync());
 
     [HttpGet("reports/project-completion")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> ProjectCompletion()
         => Ok(await _dashboardService.GetProjectCompletionAsync());
 
     [HttpGet("reports/leave-utilization")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> LeaveUtilization([FromQuery] int year = 0)
         => Ok(await _dashboardService.GetLeaveUtilizationAsync(year == 0 ? DateTime.UtcNow.Year : year));
 
     [HttpGet("reports/payroll-cost")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> PayrollCost([FromQuery] int year = 0)
         => Ok(await _dashboardService.GetPayrollCostTrendAsync(year == 0 ? DateTime.UtcNow.Year : year));
 
     [HttpGet("reports/top-employees")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> TopEmployees([FromQuery] int limit = 5)
         => Ok(await _dashboardService.GetTopEmployeesAsync(limit));
 
     [HttpGet("reports/inventory-valuation")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> InventoryValuation()
         => Ok(await _dashboardService.GetInventoryValuationAsync());
 
     [HttpGet("reports/customer-acquisition")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> CustomerAcquisition([FromQuery] int year = 0)
         => Ok(await _dashboardService.GetCustomerAcquisitionAsync(year == 0 ? DateTime.UtcNow.Year : year));
 
     [HttpGet("reports/lead-funnel")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> LeadFunnel()
         => Ok(await _dashboardService.GetLeadFunnelAsync());
 }
@@ -619,8 +647,9 @@ public class DocumentsController(
     public async Task<IActionResult> GetAll([FromQuery] PaginationParams pagination,
         [FromQuery] string? search = null, [FromQuery] string? entityType = null, [FromQuery] bool mineOnly = false)
     {
+        var filterToMe = mineOnly || currentUser.IsInRole("Employee");
         var result = await documentService.SearchAsync(pagination, search, entityType,
-            mineOnly ? currentUser.UserId : null);
+            filterToMe ? currentUser.UserId : null);
         return Ok(result);
     }
 

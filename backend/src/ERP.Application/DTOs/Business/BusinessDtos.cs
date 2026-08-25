@@ -174,7 +174,9 @@ public record DashboardStatsDto(
     decimal NetProfit,
     int LowStockProducts,
     int PendingOrders,
-    int TodayAttendance
+    int TodayAttendance,
+    int MyTasksTotal = 0,
+    int MyTasksDone = 0
 );
 
 public record MonthlyRevenueDto(string Month, decimal Revenue, decimal Expenses);

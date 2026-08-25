@@ -2,6 +2,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
+import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { AttendanceRecord, Employee } from '../../core/models/erp.models';
 
@@ -15,7 +16,7 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
         <h2>Attendance Tracking</h2>
         <p class="text-sm text-gray-400">Daily check-in / check-out times, working hours, and presence summaries</p>
       </div>
-      <button class="btn btn-primary" (click)="openMarkModal()">
+      <button class="btn btn-primary" (click)="openMarkModal()" *ngIf="canManage()">
         <i class="bi bi-plus-circle me-1"></i> Mark Attendance
       </button>
     </div>
@@ -83,8 +84,8 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
       </table>
     </div>
 
-    <!-- Reports Section -->
-    <div class="reports-header">
+    <!-- Reports Section (management only) -->
+    <div class="reports-header" *ngIf="canSeeReports()">
       <div class="reports-tabs">
         <button class="report-tab" [class.active]="reportView() === 'monthly'" (click)="setReportView('monthly')">
           <i class="bi bi-calendar3 me-1"></i> Monthly Summary
@@ -346,6 +347,10 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
 export class AttendanceComponent implements OnInit {
   private api = inject(ApiService);
   private toast = inject(ToastService);
+  private auth = inject(AuthService);
+
+  canManage(): boolean { return this.auth.hasRole(['Admin', 'HR']); }
+  canSeeReports(): boolean { return this.auth.hasRole(['Admin', 'HR', 'Manager']); }
 
   attendanceList = signal<AttendanceRecord[]>([]);
   employees = signal<Employee[]>([]);

@@ -68,7 +68,7 @@ public interface IProductCategoryService
 
 public interface ISalesOrderService
 {
-    Task<PagedResult<SalesOrderDto>> GetAllAsync(PaginationParams pagination);
+    Task<PagedResult<SalesOrderDto>> GetAllAsync(PaginationParams pagination, string? createdByUserId = null);
     Task<ApiResponse<SalesOrderDto>> GetByIdAsync(Guid id);
     Task<ApiResponse<SalesOrderDetailDto>> GetDetailAsync(Guid id);
     Task<ApiResponse<SalesOrderDto>> CreateAsync(CreateSalesOrderDto dto);
@@ -143,6 +143,7 @@ public interface IFinanceService
 public interface IDashboardService
 {
     Task<DashboardStatsDto> GetStatsAsync();
+    Task<DashboardStatsDto> GetPersonalStatsAsync(string userId);
     Task<List<MonthlyRevenueDto>> GetMonthlyRevenueAsync(int year);
     Task<List<TopProductDto>> GetTopProductsAsync(int count = 5);
     Task<List<RecentActivityDto>> GetRecentActivitiesAsync(int count = 10);

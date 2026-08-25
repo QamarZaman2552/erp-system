@@ -138,8 +138,13 @@ public class EmployeeService : IEmployeeService
                 return ApiResponse<EmployeeDto>.Fail("This login account is already linked to another employee profile.");
         }
 
-        var count = await _db.Employees.CountAsync() + 1;
-        var code = $"EMP-{count:D4}";
+        // Bug fix: derive next code from max existing (incl. soft-deleted) — CountAsync-based codes duplicated after deletes
+        var empCodes = await _db.Employees.IgnoreQueryFilters()
+            .Where(e => e.EmployeeCode.StartsWith("EMP-"))
+            .Select(e => e.EmployeeCode)
+            .ToListAsync();
+        var maxEmp = empCodes.Select(c => int.TryParse(c.AsSpan(4), out var n) ? n : 0).DefaultIfEmpty(0).Max();
+        var code = $"EMP-{maxEmp + 1:D4}";
 
         string? newUserId = null;
         if (string.IsNullOrEmpty(dto.ApplicationUserId) && !string.IsNullOrWhiteSpace(dto.NewUserPassword))
@@ -276,8 +281,20 @@ public class EmployeeService : IEmployeeService
         if (e == null) return ApiResponse<string>.Fail("Employee not found");
 
         e.IsDeleted = true;
+        e.Status = EmployeeStatus.Terminated;
         e.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        // Bug fix: deactivate linked login account on delete (same as termination via edit)
+        if (!string.IsNullOrEmpty(e.ApplicationUserId))
+        {
+            var linkedUser = await _userManager.FindByIdAsync(e.ApplicationUserId);
+            if (linkedUser != null && linkedUser.IsActive)
+            {
+                linkedUser.IsActive = false;
+                await _userManager.UpdateAsync(linkedUser);
+            }
+        }
 
         return ApiResponse<string>.Ok("Employee deleted successfully");
     }
@@ -509,7 +526,21 @@ public class AttendanceService : IAttendanceService
 {
     private readonly AppDbContext _db;
 
+    // Bug fix: attendance was calculated in UTC — wrong for PKT (UTC+5) and broke late-arrival detection
+    private static readonly TimeZoneInfo PkZone = TimeZoneInfo.FindSystemTimeZoneById(
+        OperatingSystem.IsWindows() ? "Pakistan Standard Time" : "Asia/Karachi");
+    private static DateTime NowPk() => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, PkZone);
+    private static DateOnly TodayPk() => DateOnly.FromDateTime(NowPk());
+
     public AttendanceService(AppDbContext db) => _db = db;
+
+    public async Task<Guid?> GetEmployeeIdForUserAsync(string userId)
+    {
+        return await _db.Employees.AsNoTracking()
+            .Where(e => e.ApplicationUserId == userId && !e.IsDeleted)
+            .Select(e => (Guid?)e.Id)
+            .FirstOrDefaultAsync();
+    }
 
     public async Task<PagedResult<AttendanceDto>> GetByEmployeeAsync(Guid employeeId, int month, int year, PaginationParams pagination)
     {
@@ -538,12 +569,15 @@ public class AttendanceService : IAttendanceService
         };
     }
 
-    public async Task<PagedResult<AttendanceDto>> GetTodayAsync(PaginationParams pagination)
+    public async Task<PagedResult<AttendanceDto>> GetTodayAsync(PaginationParams pagination, string? filterUserId = null)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = TodayPk();
         var query = _db.Attendances
             .Include(a => a.Employee)
             .Where(a => a.AttendanceDate == today);
+
+        if (!string.IsNullOrEmpty(filterUserId))
+            query = query.Where(a => a.Employee.ApplicationUserId == filterUserId);
 
         var total = await query.CountAsync();
         var items = await query
@@ -635,17 +669,15 @@ public class AttendanceService : IAttendanceService
             .ToListAsync();
     }
 
-    public async Task<List<AbsenteeDto>> GetAbsenteesAsync(DateOnly date)
+    public async Task<List<AbsenteeDto>> GetAbsenteesAsync(DateOnly? date)
     {
-        var markedEmployeeIds = _db.Attendances
-            .Where(a => a.AttendanceDate == date)
-            .Select(a => a.EmployeeId);
+        var today = date ?? TodayPk();
 
         return await _db.Employees
             .AsNoTracking()
             .Where(e => !e.IsDeleted
                 && e.Status == EmployeeStatus.Active
-                && !_db.Attendances.Any(a => a.AttendanceDate == date && a.EmployeeId == e.Id))
+                && !_db.Attendances.Any(a => a.AttendanceDate == today && a.EmployeeId == e.Id))
             .OrderBy(e => e.FirstName)
             .Select(e => new AbsenteeDto(
                 e.Id,
@@ -662,10 +694,10 @@ public class AttendanceService : IAttendanceService
         if (!employeeExists)
             return ApiResponse<AttendanceDto>.Fail("Employee not found. Please create an employee profile first.");
 
-        var today = dto.Date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = dto.Date ?? TodayPk();
         var existing = await _db.Attendances.FirstOrDefaultAsync(a => a.EmployeeId == dto.EmployeeId && a.AttendanceDate == today);
 
-        var nowTime = TimeOnly.FromDateTime(DateTime.UtcNow);
+        var nowTime = TimeOnly.FromDateTime(NowPk());
         var isLate = nowTime > new TimeOnly(9, 30);
 
         if (existing != null)
@@ -713,14 +745,14 @@ public class AttendanceService : IAttendanceService
         if (!employeeExists)
             return ApiResponse<AttendanceDto>.Fail("Employee not found. Please create an employee profile first.");
 
-        var today = dto.Date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = dto.Date ?? TodayPk();
         var existing = await _db.Attendances.Include(a => a.Employee)
             .FirstOrDefaultAsync(a => a.EmployeeId == dto.EmployeeId && a.AttendanceDate == today);
 
         if (existing == null || !existing.CheckInTime.HasValue)
             return ApiResponse<AttendanceDto>.Fail("No check-in record found for today");
 
-        var nowTime = TimeOnly.FromDateTime(DateTime.UtcNow);
+        var nowTime = TimeOnly.FromDateTime(NowPk());
         existing.CheckOutTime = nowTime;
 
         var duration = nowTime - existing.CheckInTime.Value;
@@ -933,6 +965,18 @@ public class LeaveService : ILeaveService
 
     public async Task<ApiResponse<LeaveRequestDto>> CreateAsync(CreateLeaveRequestDto dto)
     {
+        // Security: employees can only apply for themselves
+        if (!_currentUser.IsInRole("Admin") && !_currentUser.IsInRole("HR") && !_currentUser.IsInRole("Manager"))
+        {
+            var ownEmpId = await _db.Employees.AsNoTracking()
+                .Where(e => e.ApplicationUserId == _currentUser.UserId && !e.IsDeleted)
+                .Select(e => (Guid?)e.Id)
+                .FirstOrDefaultAsync();
+            if (ownEmpId == null)
+                return ApiResponse<LeaveRequestDto>.Fail("No employee profile is linked to your account.");
+            dto = dto with { EmployeeId = ownEmpId.Value };
+        }
+
         var days = 0;
         for (var d = dto.StartDate; d <= dto.EndDate; d = d.AddDays(1))
         {
@@ -1029,6 +1073,20 @@ public class LeaveService : ILeaveService
     {
         var leave = await _db.LeaveRequests.FindAsync(id);
         if (leave == null) return ApiResponse<string>.Fail("Leave request not found");
+
+        if (leave.Status != LeaveStatus.Pending)
+            return ApiResponse<string>.Fail($"Only pending requests can be cancelled. This request is {leave.Status}.");
+
+        // Security: only Admin/HR can cancel someone else's request
+        if (!_currentUser.IsInRole("Admin") && !_currentUser.IsInRole("HR"))
+        {
+            var ownEmpId = await _db.Employees.AsNoTracking()
+                .Where(e => e.ApplicationUserId == requesterId && !e.IsDeleted)
+                .Select(e => (Guid?)e.Id)
+                .FirstOrDefaultAsync();
+            if (ownEmpId == null || leave.EmployeeId != ownEmpId.Value)
+                return ApiResponse<string>.Fail("You can only cancel your own leave requests.");
+        }
 
         leave.Status = LeaveStatus.Cancelled;
         leave.UpdatedAt = DateTime.UtcNow;

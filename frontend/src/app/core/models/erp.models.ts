@@ -314,6 +314,8 @@ export interface DashboardStats {
   lowStockProducts: number;
   pendingOrders: number;
   todayAttendance: number;
+  myTasksTotal?: number;
+  myTasksDone?: number;
 }
 
 export interface MonthlyRevenue {

@@ -17,30 +17,42 @@ public class AttendanceController(
     [HttpGet("today")]
     public async Task<IActionResult> GetToday([FromQuery] PaginationParams pagination)
     {
-        var result = await attendanceService.GetTodayAsync(pagination);
+        var filterUserId = currentUser.IsInRole("Employee") ? currentUser.UserId : null;
+        var result = await attendanceService.GetTodayAsync(pagination, filterUserId);
         return Ok(result);
     }
 
     [HttpGet("monthly-report")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> MonthlyReport([FromQuery] int month, [FromQuery] int year)
         => Ok(await attendanceService.GetMonthlyReportAsync(month, year));
 
     [HttpGet("late-arrivals")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> LateArrivals([FromQuery] int month, [FromQuery] int year)
         => Ok(await attendanceService.GetLateArrivalsAsync(month, year));
 
     [HttpGet("absentees")]
+    [Authorize(Roles = "Admin,HR,Manager")]
     public async Task<IActionResult> Absentees([FromQuery] DateOnly? date)
-        => Ok(await attendanceService.GetAbsenteesAsync(date ?? DateOnly.FromDateTime(DateTime.UtcNow)));
+        => Ok(await attendanceService.GetAbsenteesAsync(date));
 
     [HttpGet("employee/{employeeId:guid}")]
     public async Task<IActionResult> GetByEmployee(Guid employeeId, [FromQuery] int month, [FromQuery] int year, [FromQuery] PaginationParams pagination)
     {
+        // Security: employees can only view their own attendance history
+        if (currentUser.IsInRole("Employee"))
+        {
+            var ownEmployeeId = await attendanceService.GetEmployeeIdForUserAsync(currentUser.UserId!);
+            if (ownEmployeeId == null || ownEmployeeId != employeeId)
+                return Forbid();
+        }
         var result = await attendanceService.GetByEmployeeAsync(employeeId, month, year, pagination);
         return Ok(result);
     }
 
     [HttpPost("check-in")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<IActionResult> CheckIn([FromBody] CheckInDto dto)
     {
         var res = await attendanceService.CheckInAsync(dto);
@@ -74,6 +86,7 @@ public class AttendanceController(
     }
 
     [HttpPost("check-out")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<IActionResult> CheckOut([FromBody] CheckOutDto dto)
     {
         var res = await attendanceService.CheckOutAsync(dto);
@@ -165,6 +178,7 @@ public class PayrollController : ControllerBase
     }
 
     [HttpGet("employee/{employeeId:guid}")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<IActionResult> GetByEmployee(Guid employeeId, [FromQuery] PaginationParams pagination)
     {
         var result = await _payrollService.GetByEmployeeAsync(employeeId, pagination);

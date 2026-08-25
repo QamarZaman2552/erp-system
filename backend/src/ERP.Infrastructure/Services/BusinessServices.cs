@@ -318,9 +318,19 @@ public class TaskService : ITaskService
 
     public async Task<PagedResult<TaskDto>> GetMyTasksAsync(string userId, PaginationParams pagination)
     {
+        var employeeId = await _db.Employees.AsNoTracking()
+            .Where(e => e.ApplicationUserId == userId && !e.IsDeleted)
+            .Select(e => (Guid?)e.Id)
+            .FirstOrDefaultAsync();
+
+        // No linked employee profile -> no tasks (previously leaked all tasks)
+        if (employeeId == null)
+            return new PagedResult<TaskDto> { Items = [], TotalCount = 0, Page = pagination.Page, PageSize = pagination.PageSize };
+
         var query = _db.ProjectTasks
             .Include(t => t.Project)
             .Include(t => t.Assignments).ThenInclude(a => a.Employee)
+            .Where(t => t.Assignments.Any(a => a.EmployeeId == employeeId.Value))
             .AsNoTracking();
 
         var total = await query.CountAsync();
@@ -489,8 +499,13 @@ public class ProductService : IProductService
 
     public async Task<ApiResponse<ProductDto>> CreateAsync(CreateProductDto dto)
     {
-        var count = await _db.Products.CountAsync() + 1;
-        var code = $"PRD-{count:D4}";
+        // Bug fix: max-based code (incl. soft-deleted) — CountAsync-based codes duplicated after deletes
+        var prdCodes = await _db.Products.IgnoreQueryFilters()
+            .Where(p => p.Code.StartsWith("PRD-"))
+            .Select(p => p.Code)
+            .ToListAsync();
+        var maxPrd = prdCodes.Select(c => int.TryParse(c.AsSpan(4), out var n) ? n : 0).DefaultIfEmpty(0).Max();
+        var code = $"PRD-{maxPrd + 1:D4}";
 
         var product = new Product
         {
@@ -673,16 +688,20 @@ public class SalesOrderService : ISalesOrderService
     private readonly AppDbContext _db;
     private readonly IEmailService _email;
     private readonly INotificationService _notifications;
-    public SalesOrderService(AppDbContext db, IEmailService email, INotificationService notifications)
+    private readonly ICurrentUserService _currentUser;
+    public SalesOrderService(AppDbContext db, IEmailService email, INotificationService notifications, ICurrentUserService currentUser)
     {
         _db = db;
         _email = email;
         _notifications = notifications;
+        _currentUser = currentUser;
     }
 
-    public async Task<PagedResult<SalesOrderDto>> GetAllAsync(PaginationParams pagination)
+    public async Task<PagedResult<SalesOrderDto>> GetAllAsync(PaginationParams pagination, string? createdByUserId = null)
     {
         var query = _db.SalesOrders.Include(s => s.Customer).AsNoTracking();
+        if (!string.IsNullOrEmpty(createdByUserId))
+            query = query.Where(s => s.CreatedByUserId == createdByUserId);
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(s => s.CreatedAt)
             .Skip((pagination.Page - 1) * pagination.PageSize)
@@ -715,8 +734,15 @@ public class SalesOrderService : ISalesOrderService
 
     public async Task<ApiResponse<SalesOrderDto>> CreateAsync(CreateSalesOrderDto dto)
     {
-        var count = await _db.SalesOrders.CountAsync() + 1;
-        var orderNumber = $"SO-{DateTime.UtcNow.Year}-{count:D4}";
+        // Bug fix: max-based order number (incl. soft-deleted) — CountAsync-based numbers duplicated after deletes
+        var year = DateTime.UtcNow.Year;
+        var soPrefix = $"SO-{year}-";
+        var soCodes = await _db.SalesOrders.IgnoreQueryFilters()
+            .Where(s => s.OrderNumber.StartsWith(soPrefix))
+            .Select(s => s.OrderNumber)
+            .ToListAsync();
+        var maxSo = soCodes.Select(c => int.TryParse(c.AsSpan(soPrefix.Length), out var n) ? n : 0).DefaultIfEmpty(0).Max();
+        var orderNumber = $"{soPrefix}{maxSo + 1:D4}";
 
         decimal subtotal = 0;
         decimal itemDiscounts = 0;
@@ -754,6 +780,7 @@ public class SalesOrderService : ISalesOrderService
             Status = OrderStatus.Pending,
             PaymentStatus = PaymentStatus.Pending,
             Notes = dto.Notes,
+            CreatedByUserId = _currentUser.UserId,
             Items = orderItems
         };
 
@@ -1188,8 +1215,15 @@ public class PurchaseOrderService : IPurchaseOrderService
 
     public async Task<ApiResponse<PurchaseOrderDto>> CreateAsync(CreatePurchaseOrderDto dto)
     {
-        var count = await _db.PurchaseOrders.CountAsync() + 1;
-        var orderNumber = $"PO-{DateTime.UtcNow.Year}-{count:D4}";
+        // Bug fix: max-based order number (incl. soft-deleted) — CountAsync-based numbers duplicated after deletes
+        var poYear = DateTime.UtcNow.Year;
+        var poPrefix = $"PO-{poYear}-";
+        var poCodes = await _db.PurchaseOrders.IgnoreQueryFilters()
+            .Where(p => p.OrderNumber.StartsWith(poPrefix))
+            .Select(p => p.OrderNumber)
+            .ToListAsync();
+        var maxPo = poCodes.Select(c => int.TryParse(c.AsSpan(poPrefix.Length), out var n) ? n : 0).DefaultIfEmpty(0).Max();
+        var orderNumber = $"{poPrefix}{maxPo + 1:D4}";
 
         decimal subtotal = 0;
         var orderItems = new List<PurchaseOrderItem>();
@@ -1463,10 +1497,12 @@ public class FinanceService : IFinanceService
 {
     private readonly AppDbContext _db;
     private readonly INotificationService _notifications;
-    public FinanceService(AppDbContext db, INotificationService notifications)
+    private readonly ICurrentUserService _currentUser;
+    public FinanceService(AppDbContext db, INotificationService notifications, ICurrentUserService currentUser)
     {
         _db = db;
         _notifications = notifications;
+        _currentUser = currentUser;
     }
 
     public async Task<PagedResult<FinanceTransactionDto>> GetTransactionsAsync(PaginationParams pagination,
@@ -1508,6 +1544,11 @@ public class FinanceService : IFinanceService
     public async Task<PagedResult<ExpenseDto>> GetExpensesAsync(PaginationParams pagination)
     {
         var query = _db.Expenses.AsNoTracking();
+
+        // Security: employees see only their own expense submissions
+        if (!_currentUser.IsInRole("Admin") && !_currentUser.IsInRole("HR") && !_currentUser.IsInRole("Manager"))
+            query = query.Where(e => e.SubmittedByUserId == _currentUser.UserId);
+
         var total = await query.CountAsync();
         var items = await query.OrderByDescending(e => e.CreatedAt)
             .Skip((pagination.Page - 1) * pagination.PageSize)
@@ -1528,6 +1569,7 @@ public class FinanceService : IFinanceService
             ExpenseDate = dto.ExpenseDate,
             Category = dto.Category,
             ReceiptUrl = dto.ReceiptUrl,
+            SubmittedByUserId = _currentUser.UserId,
             Status = ExpenseStatus.Pending
         };
         _db.Expenses.Add(expense);
@@ -1823,6 +1865,40 @@ public class DashboardService : IDashboardService
             lowStock,
             pendingOrders,
             todayAttendance
+        );
+    }
+
+    public async Task<DashboardStatsDto> GetPersonalStatsAsync(string userId)
+    {
+        var employee = await _db.Employees.AsNoTracking()
+            .FirstOrDefaultAsync(e => e.ApplicationUserId == userId && !e.IsDeleted);
+
+        if (employee == null)
+            return await GetStatsAsync();
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var myAttendanceToday = await _db.Attendances.AsNoTracking()
+            .AnyAsync(a => a.EmployeeId == employee.Id && a.AttendanceDate == today && a.IsPresent);
+
+        var myPendingLeaves = await _db.LeaveRequests.AsNoTracking()
+            .CountAsync(l => l.EmployeeId == employee.Id && l.Status == LeaveStatus.Pending);
+
+        var myTasksTotal = await _db.TaskAssignments.AsNoTracking()
+            .CountAsync(a => a.EmployeeId == employee.Id);
+
+        var myTasksDone = await _db.TaskAssignments.AsNoTracking()
+            .CountAsync(a => a.EmployeeId == employee.Id && a.Task.Status == ERP.Domain.Enums.TaskStatus.Done);
+
+        return new DashboardStatsDto(
+            0, 0, 0, 0,
+            myPendingLeaves,
+            0,
+            0, 0, 0,
+            0,
+            0,
+            myAttendanceToday ? 1 : 0,
+            myTasksTotal,
+            myTasksDone
         );
     }
 
