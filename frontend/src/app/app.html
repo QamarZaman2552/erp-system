@@ -13,24 +13,27 @@
   <router-outlet></router-outlet>
 </div>
 
-<div class="toast-container" aria-live="polite">
-  @for (t of toast.toasts(); track t.id) {
-    <div class="erp-toast erp-toast-{{ t.type }}">
-      <div class="erp-toast-icon">
-        @switch (t.type) {
-          @case ('success') { <i class="bi bi-check-circle-fill"></i> }
-          @case ('error') { <i class="bi bi-x-circle-fill"></i> }
-          @case ('warning') { <i class="bi bi-exclamation-triangle-fill"></i> }
-          @default { <i class="bi bi-info-circle-fill"></i> }
-        }
-      </div>
-      <div class="erp-toast-body">
-        <strong>{{ t.title }}</strong>
-        <p>{{ t.message }}</p>
-      </div>
-      <button type="button" class="erp-toast-close" (click)="toast.dismiss(t.id)" aria-label="Close">
-        &times;
-      </button>
-    </div>
-  }
-</div>
+ <div class="toast-container" aria-live="polite">
+   @for (t of toast.toasts(); track t.id) {
+     <div class="erp-toast erp-toast-{{ t.type }}" [class.erp-toast-out]="toast.dismissingIds().has(t.id)">
+       <div class="erp-toast-icon">
+         @switch (t.type) {
+           @case ('success') { <i class="bi bi-check-circle-fill"></i> }
+           @case ('error') { <i class="bi bi-x-circle-fill"></i> }
+           @case ('warning') { <i class="bi bi-exclamation-triangle-fill"></i> }
+           @default { <i class="bi bi-info-circle-fill"></i> }
+         }
+       </div>
+       <div class="erp-toast-body">
+         <strong>{{ t.title }}</strong>
+         <p>{{ t.message }}</p>
+         @if (t.undo) {
+           <button type="button" class="erp-toast-undo" (click)="toast.undo(t.id)">{{ t.undo.label }}</button>
+         }
+       </div>
+       <button type="button" class="erp-toast-close" (click)="toast.dismiss(t.id)" aria-label="Close">
+         &times;
+       </button>
+     </div>
+   }
+ </div>

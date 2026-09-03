@@ -1,43 +1,71 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 
+export interface ToastUndo {
+  label: string;
+  action: () => void;
+}
+
 export interface ToastItem {
   id: number;
   title: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
+  undo?: ToastUndo;
 }
 
 @Injectable({ providedIn: 'root' })
 export class ToastService {
   private nextId = 1;
   private toastsSignal = signal<ToastItem[]>([]);
+  dismissingIds = signal(new Set<number>());
   toasts = computed(() => this.toastsSignal());
+  private timeouts = new Map<number, ReturnType<typeof setTimeout>>();
 
-  show(title: string, message: string, type: ToastItem['type'] = 'info', duration = 5000): void {
-    const item: ToastItem = { id: this.nextId++, title, message, type };
+  show(title: string, message: string, type: ToastItem['type'] = 'info', duration = 5000, undo?: ToastUndo): number {
+    const id = this.nextId++;
+    const item: ToastItem = { id, title, message, type, undo };
     this.toastsSignal.update(list => [...list.slice(-4), item]);
-    setTimeout(() => this.dismiss(item.id), duration);
+    if (duration > 0) {
+      const t = setTimeout(() => this.dismiss(id), duration);
+      this.timeouts.set(id, t);
+    }
+    return id;
   }
 
-  success(title: string, message: string): void {
-    this.show(title, message, 'success');
+  success(title: string, message: string): number {
+    return this.show(title, message, 'success');
   }
 
-  error(title: string, message: string): void {
-    this.show(title, message, 'error', 7000);
+  error(title: string, message: string): number {
+    return this.show(title, message, 'error', 7000);
   }
 
-  warning(title: string, message: string): void {
-    this.show(title, message, 'warning', 6000);
+  warning(title: string, message: string): number {
+    return this.show(title, message, 'warning', 6000);
   }
 
-  info(title: string, message: string): void {
-    this.show(title, message, 'info');
+  info(title: string, message: string): number {
+    return this.show(title, message, 'info');
   }
 
   dismiss(id: number): void {
-    this.toastsSignal.update(list => list.filter(t => t.id !== id));
+    const t = this.timeouts.get(id);
+    if (t) { clearTimeout(t); this.timeouts.delete(id); }
+    this.dismissingIds.update(s => new Set(s).add(id));
+    setTimeout(() => {
+      this.toastsSignal.update(list => list.filter(t => t.id !== id));
+      this.dismissingIds.update(s => { const n = new Set(s); n.delete(id); return n; });
+    }, 280);
+  }
+
+  undo(id: number): void {
+    const item = this.toastsSignal().find(t => t.id === id);
+    if (!item) return;
+    const t = this.timeouts.get(id);
+    if (t) { clearTimeout(t); this.timeouts.delete(id); }
+    try { item.undo?.action(); } catch (_) { /* ignore undo action errors */ }
+    this.dismiss(id);
   }
 
   showHttpError(err: HttpErrorResponse): void {

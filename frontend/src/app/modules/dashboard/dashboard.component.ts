@@ -22,6 +22,13 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
       </div>
 
       <!-- KPI Metric Cards Grid (company-wide: management only) -->
+      @if (loading()) {
+      <div class="metrics-grid">
+        @for (i of [1,2,3,4]; track i) {
+          <div class="skeleton-card"><div class="skeleton-line short"></div><div class="skeleton-line"></div><div class="skeleton-line narrow"></div></div>
+        }
+      </div>
+      } @else {
       @if (canSeeAnalytics()) {
       <div class="metrics-grid">
         <div class="metric-card erp-card">
@@ -116,14 +123,24 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
         </div>
       </div>
       }
+      }
 
-      <!-- Content Sections: Charts & Activity Feeds -->
+      <!-- Charts Row -->
+      @if (loading()) {
+      <div class="analytics-row">
+        @for (i of [1,2]; track i) {
+          <div class="chart-card erp-card"><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line medium"></div><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+          <div class="feed-card erp-card"><div class="skeleton-line"></div><div class="skeleton-row"><div class="skeleton skeleton-avatar"></div><div class="skeleton-text-group"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>@for(j of [1,2,3]; track j){<div class="skeleton-row"><div class="skeleton skeleton-avatar"></div><div class="skeleton-text-group"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div></div>}
+          </div>
+        }
+      </div>
+      } @else {
       <div class="analytics-row">
         <!-- Monthly Cash Flow Bar Visualization -->
         <div class="chart-card erp-card">
           <div class="card-header-flex">
             <h3>Monthly Financial Performance</h3>
-            <span class="badge badge-info">FY 2026</span>
+            <span class="badge badge-info">FY {{ reportYear() }}</span>
           </div>
 
           <div class="bars-container">
@@ -172,12 +189,24 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
           </div>
         </div>
       </div>
+      }
 
       <!-- ─── Reports & Analytics Section (Admin/HR/Manager) ─── -->
+      @if (loading()) {
+      <div class="analytics-section">
+        @for (i of [1,2,3]; track i) {
+          <div class="erp-card p-3 h-100"><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div><div class="skeleton-line"></div></div>
+        }
+      </div>
+      } @else {
       <div *ngIf="canSeeAnalytics()" class="analytics-section">
-        <div class="d-flex justify-content-between align-items-center mb-2">
+        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
           <h3 style="font-size:18px;margin:0"><i class="bi bi-graph-up-arrow me-2"></i>Reports &amp; Analytics</h3>
-          <span class="badge bg-secondary">{{ reportYear }}</span>
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-sm btn-outline-secondary" [class.active]="period() === '6M'" (click)="setPeriod('6M')">6M</button>
+            <button class="btn btn-sm btn-outline-secondary" [class.active]="period() === '1Y'" (click)="setPeriod('1Y')">1Y</button>
+            <button class="btn btn-sm btn-outline-secondary" [class.active]="period() === '2Y'" (click)="setPeriod('2Y')">2Y</button>
+          </div>
         </div>
 
         <div class="row g-3">
@@ -316,7 +345,7 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
           <!-- Customer Acquisition -->
           <div class="col-md-6 col-xl-4">
             <div class="erp-card p-3 h-100">
-              <h6 class="mb-3"><i class="bi bi-person-plus me-2 text-info"></i>Customer Acquisition {{ reportYear }}</h6>
+              <h6 class="mb-3"><i class="bi bi-person-plus me-2 text-info"></i>Customer Acquisition {{ reportYear() }}</h6>
               <div *ngIf="custAcq().length > 0">
                 <div class="mini-bar-row" *ngFor="let c of custAcq()" [title]="c.month + ': +' + c.newCustomers + ' customers'">
                   <span class="mini-bar-label">{{ c.month }}</span>
@@ -329,8 +358,9 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
           </div>
         </div>
       </div>
-    </div>
-  `,
+        }
+      </div>
+    `,
   styles: [`
     .dashboard-page {
       display: flex;
@@ -606,23 +636,11 @@ export class DashboardComponent implements OnInit {
 
   user = this.auth.currentUser;
   stats = signal<DashboardStats | null>(null);
-  monthlyData = signal<MonthlyRevenue[]>([
-    { month: 'Jan', revenue: 45000, expenses: 32000 },
-    { month: 'Feb', revenue: 52000, expenses: 28000 },
-    { month: 'Mar', revenue: 61000, expenses: 35000 },
-    { month: 'Apr', revenue: 58000, expenses: 31000 },
-    { month: 'May', revenue: 72000, expenses: 40000 },
-    { month: 'Jun', revenue: 84000, expenses: 42000 },
-    { month: 'Jul', revenue: 79000, expenses: 38000 },
-    { month: 'Aug', revenue: 95000, expenses: 46000 },
-    { month: 'Sep', revenue: 88000, expenses: 44000 },
-    { month: 'Oct', revenue: 102000, expenses: 51000 },
-    { month: 'Nov', revenue: 110000, expenses: 54000 },
-    { month: 'Dec', revenue: 124500, expenses: 62000 },
-  ]);
+  loading = signal(true);
+  period = signal<'6M' | '1Y' | '2Y'>('1Y');
+  monthlyData = signal<MonthlyRevenue[]>([]);
   activities = signal<RecentActivity[]>([]);
-
-  // Analytics
+  reportYear = signal(new Date().getFullYear());
   attendanceTrends = signal<any[]>([]);
   deptDist = signal<any[]>([]);
   projects = signal<any[]>([]);
@@ -632,11 +650,20 @@ export class DashboardComponent implements OnInit {
   inventoryVal = signal<any[]>([]);
   custAcq = signal<any[]>([]);
   leadFunnelData = signal<any[]>([]);
-  reportYear = new Date().getFullYear();
 
   ngOnInit(): void {
     this.loadStats();
-    if (this.canSeeAnalytics()) this.loadAnalytics();
+  }
+
+  setPeriod(p: '6M' | '1Y' | '2Y'): void {
+    this.period.set(p);
+    this.loadStats();
+  }
+
+  getYearForPeriod(): number {
+    const y = new Date().getFullYear();
+    if (this.period() === '2Y') return y - 1;
+    return y;
   }
 
   canSeeAnalytics(): boolean {
@@ -644,14 +671,15 @@ export class DashboardComponent implements OnInit {
   }
 
   loadAnalytics(): void {
+    const y = this.getYearForPeriod();
     this.api.attendanceTrends().subscribe({ next: r => this.attendanceTrends.set(r || []), error: () => {} });
     this.api.deptDistribution().subscribe({ next: r => this.deptDist.set(r || []), error: () => {} });
     this.api.projectCompletion().subscribe({ next: r => this.projects.set(r || []), error: () => {} });
-    this.api.leaveUtilization(this.reportYear).subscribe({ next: r => this.leaveUtil.set(r || []), error: () => {} });
-    this.api.payrollCost(this.reportYear).subscribe({ next: r => this.payrollCosts.set(r || []), error: () => {} });
+    this.api.leaveUtilization(y).subscribe({ next: r => this.leaveUtil.set(r || []), error: () => {} });
+    this.api.payrollCost(y).subscribe({ next: r => this.payrollCosts.set(r || []), error: () => {} });
     this.api.topEmployees(5).subscribe({ next: r => this.topEmployees.set(r || []), error: () => {} });
     this.api.inventoryValuation().subscribe({ next: r => this.inventoryVal.set(r || []), error: () => {} });
-    this.api.customerAcquisition(this.reportYear).subscribe({ next: r => this.custAcq.set(r || []), error: () => {} });
+    this.api.customerAcquisition(y).subscribe({ next: r => this.custAcq.set(r || []), error: () => {} });
     this.api.leadFunnel().subscribe({ next: r => this.leadFunnelData.set(r || []), error: () => {} });
   }
 
@@ -664,14 +692,15 @@ export class DashboardComponent implements OnInit {
   maxCustAcq(): number { return Math.max(...this.custAcq().map(c => c.newCustomers), 1); }
 
   loadStats(): void {
+    this.loading.set(true);
     this.api.getDashboardStats().subscribe({
-      next: (res) => this.stats.set(res),
-      error: () => {}
+      next: (res) => { this.stats.set(res); this.loading.set(false); },
+      error: () => this.loading.set(false)
     });
 
-    if (!this.canSeeAnalytics()) return; // company-wide charts are management-only
+    if (!this.canSeeAnalytics()) return;
 
-    this.api.getRevenueChart(new Date().getFullYear()).subscribe({
+    this.api.getRevenueChart(this.getYearForPeriod()).subscribe({
       next: (res) => {
         if (res && res.length > 0) this.monthlyData.set(res);
       },
@@ -682,6 +711,8 @@ export class DashboardComponent implements OnInit {
       next: (res) => this.activities.set(res),
       error: () => {}
     });
+
+    this.loadAnalytics();
   }
 
   getBarHeight(val: number): number {

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
@@ -43,22 +43,37 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
     </div>
 
     <!-- Data Table -->
+    @if (loading()) {
+    <div class="erp-table-container">
+      @for (i of [1,2,3,4,5]; track i) {
+        <div class="skeleton-row">
+          <div class="skeleton skeleton-circle"></div>
+          <div class="skeleton-text-group"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line narrow"></div>
+          <div class="skeleton-line narrow"></div>
+          <div class="skeleton-line short"></div>
+          <div class="skeleton-line narrow"></div>
+        </div>
+      }
+    </div>
+    } @else {
     <div class="erp-table-container">
       <table class="erp-table">
         <thead>
           <tr>
-            <th>Code</th>
-            <th>Employee Name</th>
+            <th class="sortable" [class.active]="sortField() === 'employeeCode'" (click)="onSort('employeeCode')">Code <span class="sort-icon">{{ sortField() === 'employeeCode' ? (sortDir() === 'asc' ? '▲' : '▼') : '⇅' }}</span></th>
+            <th class="sortable" [class.active]="sortField() === 'fullName'" (click)="onSort('fullName')">Employee Name <span class="sort-icon">{{ sortField() === 'fullName' ? (sortDir() === 'asc' ? '▲' : '▼') : '⇅' }}</span></th>
             <th>Email &amp; Phone</th>
-            <th>Department</th>
-            <th>Designation</th>
-            <th>Basic Salary</th>
-            <th>Status</th>
+            <th class="sortable" [class.active]="sortField() === 'departmentName'" (click)="onSort('departmentName')">Department <span class="sort-icon">{{ sortField() === 'departmentName' ? (sortDir() === 'asc' ? '▲' : '▼') : '⇅' }}</span></th>
+            <th class="sortable" [class.active]="sortField() === 'designationTitle'" (click)="onSort('designationTitle')">Designation <span class="sort-icon">{{ sortField() === 'designationTitle' ? (sortDir() === 'asc' ? '▲' : '▼') : '⇅' }}</span></th>
+            <th class="sortable" [class.active]="sortField() === 'basicSalary'" (click)="onSort('basicSalary')">Salary <span class="sort-icon">{{ sortField() === 'basicSalary' ? (sortDir() === 'asc' ? '▲' : '▼') : '⇅' }}</span></th>
+            <th class="sortable" [class.active]="sortField() === 'status'" (click)="onSort('status')">Status <span class="sort-icon">{{ sortField() === 'status' ? (sortDir() === 'asc' ? '▲' : '▼') : '⇅' }}</span></th>
             <th>Actions</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let emp of employees()">
+          <tr *ngFor="let emp of sortedEmployees()">
             <td><span class="font-mono text-indigo-400">{{ emp.employeeCode }}</span></td>
             <td>
               <div class="emp-profile-cell">
@@ -91,14 +106,19 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
             </td>
           </tr>
 
-          <tr *ngIf="employees().length === 0">
-            <td colspan="8" class="text-center py-8 text-gray-400">
-              No employees found matching your criteria.
+          <tr *ngIf="sortedEmployees().length === 0">
+            <td colspan="8" class="text-center py-8">
+              <div class="empty-state-card">
+                <div class="empty-state-icon">📭</div>
+                <div class="font-semibold">No employees found</div>
+                <div class="text-sm text-gray-400">Adjust your search or filters to see more results.</div>
+              </div>
             </td>
           </tr>
         </tbody>
       </table>
     </div>
+    }
 
     <!-- Create Employee Modal -->
     <div class="modal d-block bg-black bg-opacity-75" tabindex="-1" *ngIf="showModal()">
@@ -247,6 +267,16 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
     .text-center { text-align: center; }
     .py-8 { padding-top: 32px; padding-bottom: 32px; }
 
+    .empty-state-card {
+      padding: 40px 16px;
+      text-align: center;
+    }
+
+    .empty-state-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
     @media (max-width: 767.98px) {
       .page-header-row {
         flex-direction: column;
@@ -268,6 +298,9 @@ export class EmployeesComponent implements OnInit {
   saving = signal(false);
   editingId = signal<string | null>(null);
   editingCode = '';
+  loading = signal(true);
+  sortField = signal<string>('employeeCode');
+  sortDir = signal<'asc' | 'desc'>('asc');
 
   private searchTimer: any;
 
@@ -292,6 +325,27 @@ export class EmployeesComponent implements OnInit {
   filterDeptId: string | null = null;
   filterStatus: number | null = null;
 
+  sortedEmployees = computed(() => {
+    const list = this.employees();
+    const field = this.sortField();
+    const dir = this.sortDir();
+    return [...list].sort((a, b) => {
+      const va = (a as any)[field] ?? '';
+      const vb = (b as any)[field] ?? '';
+      const cmp = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb));
+      return dir === 'asc' ? cmp : -cmp;
+    });
+  });
+
+  onSort(field: string): void {
+    if (this.sortField() === field) {
+      this.sortDir.update(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      this.sortField.set(field);
+      this.sortDir.set('asc');
+    }
+  }
+
   ngOnInit(): void {
     this.loadEmployees();
     this.loadMetadata();
@@ -310,17 +364,19 @@ export class EmployeesComponent implements OnInit {
   }
 
   loadEmployees(): void {
+    this.loading.set(true);
     this.api.getEmployees(1, 50, this.searchTerm, this.filterDeptId || undefined, this.filterStatus).subscribe({
       next: (res) => {
-        if (res?.items) this.employees.set(res.items);
+        if (res?.items) { this.employees.set(res.items); this.loading.set(false); }
+        else this.loading.set(false);
       },
-      error: () => this.notifications.addNotification({
+      error: () => { this.loading.set(false); this.notifications.addNotification({
         id: Math.random().toString(),
         title: 'Employees',
         message: 'Failed to load employees.',
         type: 'error',
         timestamp: new Date()
-      })
+      }) }
     });
   }
 
