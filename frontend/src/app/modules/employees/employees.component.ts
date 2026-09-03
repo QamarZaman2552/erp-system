@@ -37,6 +37,7 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
         <option [ngValue]="3">On Leave</option>
       </select>
       <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()" *ngIf="filterDeptId || filterStatus !== null">Clear</button>
+      <button class="btn btn-sm btn-outline-primary ms-2" (click)="downloadCsv()" title="Export employees as CSV">📥 Export CSV</button>
       <div class="stats-counter ms-auto">
         Total Staff: <strong>{{ employees().length }}</strong>
       </div>
@@ -200,10 +201,14 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
                       <input type="checkbox" [(ngModel)]="newEmp.createLogin" name="cl" class="form-check-input me-1" />
                       Auto-create login account
                     </label>
-                    <input type="text" *ngIf="newEmp.createLogin" [(ngModel)]="newEmp.newPassword" name="npwd"
-                           class="form-control form-control-sm mt-1" placeholder="Login password (min 6 chars)" />
-                    <small class="form-hint">Creates a system user (Employee role) with this password.</small>
-                  </div>
+                     <input type="text" *ngIf="newEmp.createLogin" [(ngModel)]="newEmp.newPassword" (ngModelChange)="onPasswordInput($event)" name="npwd"
+                            class="form-control form-control-sm mt-1" placeholder="Login password (min 6 chars)" />
+                     <div class="password-strength mt-1" *ngIf="newEmp.newPassword">
+                       <div class="strength-bar" *ngFor="let s of [1,2,3,4,5]" [class.active]="passwordStrength() >= s" [style.background-color]="passwordStrength() >= s ? strengthColor(s) : 'var(--bg-tertiary)'"></div>
+                       <small class="form-hint" [style.color]="strengthColor(passwordStrength())">{{ strengthLabel() }}</small>
+                     </div>
+                     <small class="form-hint">Creates a system user (Employee role) with this password.</small>
+                   </div>
                 }
                 <div class="col-md-6">
                   <label class="form-label small">Reporting Manager</label>
@@ -275,6 +280,21 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
     .empty-state-icon {
       font-size: 40px;
       margin-bottom: 12px;
+    }
+
+    .password-strength {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 6px;
+    }
+
+    .strength-bar {
+      height: 4px;
+      flex: 1;
+      border-radius: 2px;
+      background: var(--bg-tertiary);
+      transition: background 0.2s;
     }
 
     @media (max-width: 767.98px) {
@@ -577,5 +597,45 @@ export class EmployeesComponent implements OnInit {
       case 'Terminated': return 'badge-danger';
       default: return 'badge-neutral';
     }
+  }
+
+  downloadCsv(): void {
+    const emps = this.employees();
+    if (emps.length === 0) { this.notify('Employees', 'No data to export.', 'warning'); return; }
+    const headers = ['Code', 'Name', 'Email', 'Phone', 'Department', 'Designation', 'Salary', 'Status', 'Joined'];
+    const rows = emps.map(e => [
+      e.employeeCode, e.fullName, e.email, e.phone || '', e.departmentName, e.designationTitle,
+      String(e.basicSalary), e.status, e.dateOfJoining ? new Date(e.dateOfJoining).toLocaleDateString('en-GB') : ''
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `employees_${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    URL.revokeObjectURL(url);
+    this.notify('Employees', `${emps.length} employees exported.`, 'success');
+  }
+
+  passwordStrength = signal(0);
+
+  onPasswordInput(pw: string): void {
+    const s = pw || '';
+    let sc = 0;
+    if (s.length >= 6) sc++;
+    if (s.length >= 10) sc++;
+    if (/[A-Z]/.test(s)) sc++;
+    if (/[0-9]/.test(s)) sc++;
+    if (/[^A-Za-z0-9]/.test(s)) sc++;
+    this.passwordStrength.set(sc);
+  }
+
+  strengthLabel(): string {
+    const l = ['', 'Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+    return l[this.passwordStrength()] || '';
+  }
+
+  strengthColor(lvl: number): string {
+    const c = ['', '#e74c3c', '#e74c3c', '#f39c12', '#2ecc71', '#2ecc71'];
+    return c[lvl] || 'transparent';
   }
 }

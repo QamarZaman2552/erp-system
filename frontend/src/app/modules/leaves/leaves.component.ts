@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
@@ -19,6 +19,26 @@ import { LeaveRequest, Employee } from '../../core/models/erp.models';
       <button class="btn btn-primary" (click)="showModal.set(true)">
         <span>+ Apply for Leave</span>
       </button>
+    </div>
+
+    <!-- Leave Summary Bar -->
+    <div class="filter-bar erp-card d-flex align-items-center gap-3 flex-wrap">
+      <div class="summary-counter">
+        <span class="text-muted">Pending:</span>
+        <strong class="text-warning">{{ pendingCount() }}</strong>
+      </div>
+      <div class="summary-counter">
+        <span class="text-muted">Approved:</span>
+        <strong class="text-success">{{ approvedCount() }}</strong>
+      </div>
+      <div class="summary-counter">
+        <span class="text-muted">Rejected:</span>
+        <strong class="text-danger">{{ rejectedCount() }}</strong>
+      </div>
+      <div class="summary-counter">
+        <span class="text-muted">Days Used (Approved):</span>
+        <strong class="text-primary">{{ approvedDays() }}</strong>
+      </div>
     </div>
 
     <!-- Leave Requests Table -->
@@ -202,6 +222,17 @@ import { LeaveRequest, Employee } from '../../core/models/erp.models';
       gap: 6px;
     }
 
+    .summary-counter {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .summary-counter strong {
+      font-size: 16px;
+    }
+
     .text-sm { font-size: 13px; }
     .text-xs { font-size: 11px; }
     .text-gray-300 { color: #d1d5db; }
@@ -221,6 +252,11 @@ export class LeavesComponent implements OnInit {
   leaves = signal<LeaveRequest[]>([]);
   employees = signal<Employee[]>([]);
   showModal = signal(false);
+
+  pendingCount = computed(() => this.leaves().filter(l => l.status === 'Pending').length);
+  approvedCount = computed(() => this.leaves().filter(l => l.status === 'Approved').length);
+  rejectedCount = computed(() => this.leaves().filter(l => l.status === 'Rejected').length);
+  approvedDays = computed(() => this.leaves().filter(l => l.status === 'Approved').reduce((s, l) => s + (l.totalDays || 0), 0));
 
   newLeave: any = {
     employeeId: '',
