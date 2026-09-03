@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
@@ -68,6 +68,13 @@ import { ThemeToggleComponent } from './theme-toggle.component';
             </div>
           </div>
         </div>
+
+        <!-- Background Jobs Indicator -->
+        <button class="jobs-pill" (click)="refreshJobs()" title="Background jobs status" aria-label="Background jobs status">
+          <span class="jobs-dot" *ngIf="activeJobsCount() > 0"></span>
+          <span>⏳</span>
+          <span class="jobs-count" *ngIf="activeJobsCount() > 0">{{ activeJobsCount() }}</span>
+        </button>
 
         <!-- Theme Toggle -->
         <app-theme-toggle></app-theme-toggle>
@@ -158,6 +165,50 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       display: flex;
       align-items: center;
       gap: 16px;
+    }
+
+    .jobs-pill {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--text-primary);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+
+    .jobs-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .jobs-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f39c12;
+      box-shadow: 0 0 6px #f39c12;
+      animation: job-pulse 1.2s ease infinite;
+    }
+
+    @keyframes job-pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    .jobs-count {
+      font-size: 12px;
+      font-weight: 700;
+      background: rgba(243, 156, 18, 0.2);
+      color: #f39c12;
+      border-radius: 9999px;
+      padding: 1px 7px;
+      min-width: 18px;
+      text-align: center;
     }
 
     .icon-btn {
@@ -276,9 +327,23 @@ export class HeaderComponent {
 
   showNotifications = signal(false);
   isCheckedIn = signal(false);
+  jobs = signal<{ name: string; status: 'running' | 'completed' }[]>([
+    { name: 'Email queue', status: 'completed' },
+    { name: 'Report generation', status: 'completed' },
+    { name: 'DB backup', status: 'completed' },
+  ]);
+
+  activeJobsCount = computed(() => this.jobs().filter(j => j.status === 'running').length);
 
   notifications = this.notificationService.notifications;
   unreadCount = this.notificationService.unreadCount;
+
+  refreshJobs(): void {
+    this.jobs.update(list => list.map(j => ({
+      ...j,
+      status: Math.random() > 0.5 ? 'running' : 'completed'
+    })));
+  }
 
   toggleNotifications(): void {
     this.showNotifications.update(s => !s);
