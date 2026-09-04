@@ -1,8 +1,15 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../../core/models/erp.models';
+
+type WidgetKey = 'kpiCards' | 'charts' | 'analytics';
+interface WidgetConfig {
+  kpiCards: boolean;
+  charts: boolean;
+  analytics: boolean;
+}
 
 @Component({
   selector: 'app-dashboard',
@@ -19,17 +26,29 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
         <div class="quick-stats-pill">
           <span class="live-dot"></span> Live Enterprise Status: <strong>Operational</strong>
         </div>
+        <div class="widget-toggle-area">
+          <button class="btn btn-sm btn-outline-secondary" (click)="toggleWidget('kpiCards')" title="Toggle KPI Cards">
+            {{ isVisible('kpiCards') ? '👁️' : '👁️‍🗨️' }} KPIs
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" (click)="toggleWidget('charts')" title="Toggle Charts">
+            {{ isVisible('charts') ? '👁️' : '👁️‍🗨️' }} Charts
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" (click)="toggleWidget('analytics')" title="Toggle Analytics">
+            {{ isVisible('analytics') ? '👁️' : '👁️‍🗨️' }} Analytics
+          </button>
+        </div>
       </div>
 
-      <!-- KPI Metric Cards Grid (company-wide: management only) -->
-      @if (loading()) {
+    <!-- KPI Metric Cards Grid -->
+    @if (isVisible('kpiCards')) {
+    @if (loading()) {
       <div class="metrics-grid">
         @for (i of [1,2,3,4]; track i) {
           <div class="skeleton-card"><div class="skeleton-line short"></div><div class="skeleton-line"></div><div class="skeleton-line narrow"></div></div>
         }
       </div>
-      } @else {
-      @if (canSeeAnalytics()) {
+    } @else {
+    @if (canSeeAnalytics()) {
       <div class="metrics-grid">
         <div class="metric-card erp-card">
           <div class="metric-header">
@@ -124,8 +143,10 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
       </div>
       }
       }
+      }
 
       <!-- Charts Row -->
+      @if (isVisible('charts')) {
       @if (loading()) {
       <div class="analytics-row">
         @for (i of [1,2]; track i) {
@@ -189,9 +210,11 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
           </div>
         </div>
       </div>
-      }
+       }
+       }
 
-      <!-- ─── Reports & Analytics Section (Admin/HR/Manager) ─── -->
+       <!-- ─── Reports & Analytics Section (Admin/HR/Manager) ─── -->
+      @if (isVisible('analytics')) {
       @if (loading()) {
       <div class="analytics-section">
         @for (i of [1,2,3]; track i) {
@@ -358,10 +381,10 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
           </div>
         </div>
       </div>
-        }
-      </div>
-    `,
-  styles: [`
+       }
+       }
+     `,
+   styles: [`
     .dashboard-page {
       display: flex;
       flex-direction: column;
@@ -373,6 +396,17 @@ import { DashboardStats, MonthlyRevenue, RecentActivity, TopProduct } from '../.
       align-items: center;
       justify-content: space-between;
       background: linear-gradient(135deg, rgba(192, 192, 192, 0.15) 0%, rgba(166, 166, 166, 0.1) 100%), var(--bg-glass-card);
+    }
+
+    .widget-toggle-area {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .widget-toggle-area .btn {
+      font-size: 12px;
+      padding: 4px 10px;
     }
 
     .welcome-banner h2 {
@@ -650,9 +684,33 @@ export class DashboardComponent implements OnInit {
   inventoryVal = signal<any[]>([]);
   custAcq = signal<any[]>([]);
   leadFunnelData = signal<any[]>([]);
+  widgetConfig = signal<WidgetConfig>(this.loadWidgetConfig());
 
   ngOnInit(): void {
     this.loadStats();
+  }
+
+  toggleWidget(key: WidgetKey): void {
+    this.widgetConfig.update(c => ({ ...c, [key]: !c[key] }));
+    this.saveWidgetConfig();
+  }
+
+  isVisible(key: WidgetKey): boolean {
+    return this.widgetConfig()[key];
+  }
+
+  private loadWidgetConfig(): WidgetConfig {
+    try {
+      const saved = localStorage.getItem('erp_dashboard_widgets');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { kpiCards: true, charts: true, analytics: true };
+  }
+
+  private saveWidgetConfig(): void {
+    try {
+      localStorage.setItem('erp_dashboard_widgets', JSON.stringify(this.widgetConfig()));
+    } catch {}
   }
 
   setPeriod(p: '6M' | '1Y' | '2Y'): void {
