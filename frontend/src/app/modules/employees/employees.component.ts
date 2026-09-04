@@ -1,8 +1,9 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
+import { SearchService } from '../../core/services/search.service';
 import { Employee, Department, Designation, LinkableUser } from '../../core/models/erp.models';
 
 @Component({
@@ -23,7 +24,7 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
     <!-- Filter Bar -->
     <div class="filter-bar erp-card">
       <div class="search-field">
-        <input type="text" [ngModel]="searchTerm" (ngModelChange)="onSearch($event)" placeholder="Search by name, email, code..." class="form-control" />
+        <input type="text" [ngModel]="searchTerm()" (ngModelChange)="searchService.setSearch($event)" placeholder="Search by name, email, code..." class="form-control" />
       </div>
       <select [(ngModel)]="filterDeptId" (change)="loadEmployees()" class="form-select form-select-sm" style="max-width: 180px;">
         <option [ngValue]="null">All Departments</option>
@@ -308,12 +309,13 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
 export class EmployeesComponent implements OnInit {
   private api = inject(ApiService);
   private notifications = inject(NotificationService);
+  searchService = inject(SearchService);
 
   employees = signal<Employee[]>([]);
   departments = signal<Department[]>([]);
   designations = signal<Designation[]>([]);
   linkableUsers = signal<LinkableUser[]>([]);
-  searchTerm = '';
+  searchTerm = this.searchService.search;
   showModal = signal(false);
   saving = signal(false);
   editingId = signal<string | null>(null);
@@ -321,8 +323,6 @@ export class EmployeesComponent implements OnInit {
   loading = signal(true);
   sortField = signal<string>('employeeCode');
   sortDir = signal<'asc' | 'desc'>('asc');
-
-  private searchTimer: any;
 
   newEmp: any = {
     firstName: '',
@@ -367,7 +367,7 @@ export class EmployeesComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.loadEmployees();
+    effect(() => this.loadEmployees());
     this.loadMetadata();
   }
 
@@ -377,15 +377,9 @@ export class EmployeesComponent implements OnInit {
     this.loadEmployees();
   }
 
-  onSearch(term: string): void {
-    this.searchTerm = term;
-    clearTimeout(this.searchTimer);
-    this.searchTimer = setTimeout(() => this.loadEmployees(), 400);
-  }
-
   loadEmployees(): void {
     this.loading.set(true);
-    this.api.getEmployees(1, 50, this.searchTerm, this.filterDeptId || undefined, this.filterStatus).subscribe({
+    this.api.getEmployees(1, 50, this.searchTerm(), this.filterDeptId || undefined, this.filterStatus).subscribe({
       next: (res) => {
         if (res?.items) { this.employees.set(res.items); this.loading.set(false); }
         else this.loading.set(false);
@@ -462,7 +456,6 @@ export class EmployeesComponent implements OnInit {
       applicationUserId: '',
       statusIndex: statusMap[emp.status] ?? 0
     };
-    // resolve department/designation ids from loaded metadata by name
     const dept = this.departments().find(d => d.name === emp.departmentName);
     if (dept) {
       this.newEmp.departmentId = dept.id;

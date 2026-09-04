@@ -1,16 +1,18 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { ApiService } from '../../core/services/api.service';
 import { UiService } from '../../core/services/ui.service';
+import { SearchService } from '../../core/services/search.service';
 import { ThemeToggleComponent } from './theme-toggle.component';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, ThemeToggleComponent],
+  imports: [CommonModule, FormsModule, RouterModule, ThemeToggleComponent],
   template: `
     <header class="header-container">
       <!-- Mobile Menu Toggle -->
@@ -21,7 +23,10 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       <!-- Search or Page Indicator -->
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input type="text" placeholder="Search employees, orders, projects..." class="search-input" />
+        <input type="text" [ngModel]="searchTerm()" (ngModelChange)="onSearch($any($event))" placeholder="Search employees, orders, projects..." class="search-input" />
+        @if (searchTerm()) {
+          <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" (click)="clearSearch()" aria-label="Clear search" style="font-size:12px;margin-left:4px;">&times;</button>
+        }
       </div>
 
       <!-- Quick Action Controls -->
@@ -323,6 +328,7 @@ export class HeaderComponent {
   notificationService = inject(NotificationService);
   apiService = inject(ApiService);
   ui = inject(UiService);
+  searchService = inject(SearchService);
   private router = inject(Router);
 
   showNotifications = signal(false);
@@ -334,6 +340,7 @@ export class HeaderComponent {
   ]);
 
   activeJobsCount = computed(() => this.jobs().filter(j => j.status === 'running').length);
+  searchTerm = this.searchService.search;
 
   notifications = this.notificationService.notifications;
   unreadCount = this.notificationService.unreadCount;
@@ -343,6 +350,14 @@ export class HeaderComponent {
       ...j,
       status: Math.random() > 0.5 ? 'running' : 'completed'
     })));
+  }
+
+  onSearch(term: string): void {
+    this.searchService.setSearch(term);
+  }
+
+  clearSearch(): void {
+    this.searchService.clear();
   }
 
   toggleNotifications(): void {
