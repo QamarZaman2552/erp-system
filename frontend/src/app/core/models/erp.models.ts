@@ -336,3 +336,21 @@ export interface RecentActivity {
   timestamp: string;
   type: string;
 }
+
+export interface RecurringTask {
+  id: string;
+  title: string;
+  description?: string;
+  frequency: 'Daily' | 'Weekly' | 'Monthly';
+  startDate: string;
+  endDate?: string;
+  isActive: boolean;
+  status: 'Active' | 'Paused' | 'Completed' | 'Cancelled';
+  category: string;
+  assignedTo?: string;
+  createdBy?: string;
+  lastExecutedAt?: string;
+  nextExecutionDate: string;
+  createdAt: string;
+  completedCount: number;
+}

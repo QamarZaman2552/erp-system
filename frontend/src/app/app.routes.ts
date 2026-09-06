@@ -69,6 +69,11 @@ export const routes: Routes = [
     loadComponent: () => import('./modules/inventory/inventory.component').then(m => m.InventoryComponent)
   },
   {
+    path: 'tasks',
+    canActivate: [authGuard],
+    loadComponent: () => import('./modules/tasks/recurring-tasks.component').then(m => m.RecurringTasksComponent)
+  },
+  {
     path: 'sales',
     canActivate: [authGuard],
     loadComponent: () => import('./modules/sales/sales.component').then(m => m.SalesComponent)

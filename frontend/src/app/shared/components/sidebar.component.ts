@@ -67,6 +67,11 @@ import { UiService } from '../../core/services/ui.service';
           <span class="nav-text">Projects &amp; Tasks</span>
         </a>
 
+        <a routerLink="/tasks" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
+          <span class="nav-icon">🔄</span>
+          <span class="nav-text">Recurring Tasks</span>
+        </a>
+
         <a routerLink="/team" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessTeam()">
           <span class="nav-icon">🧑‍💼</span>
           <span class="nav-text">My Team</span>

@@ -30,7 +30,8 @@ import {
   DashboardStats,
   MonthlyRevenue,
   TopProduct,
-  RecentActivity
+  RecentActivity,
+  RecurringTask
 } from '../models/erp.models';
 
 @Injectable({
@@ -649,5 +650,25 @@ export class ApiService {
   getBudgets(month: number, year: number): Observable<Budget[]> {
     const params = new HttpParams().set('month', month.toString()).set('year', year.toString());
     return this.http.get<Budget[]>(`${this.baseUrl}/finance/budgets`, { params });
+  }
+
+  getRecurringTasks(): Observable<RecurringTask[]> {
+    return this.http.get<RecurringTask[]>(`${this.baseUrl}/tasks/recurring`);
+  }
+
+  createRecurringTask(task: Partial<RecurringTask>): Observable<ApiResponse<RecurringTask>> {
+    return this.http.post<ApiResponse<RecurringTask>>(`${this.baseUrl}/tasks/recurring`, task);
+  }
+
+  updateRecurringTask(id: string, task: Partial<RecurringTask>): Observable<ApiResponse<RecurringTask>> {
+    return this.http.put<ApiResponse<RecurringTask>>(`${this.baseUrl}/tasks/recurring/${id}`, task);
+  }
+
+  deleteRecurringTask(id: string): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.baseUrl}/tasks/recurring/${id}`);
+  }
+
+  toggleRecurringTask(id: string): Observable<ApiResponse<RecurringTask>> {
+    return this.http.post<ApiResponse<RecurringTask>>(`${this.baseUrl}/tasks/recurring/${id}/toggle`, {});
   }
 }
