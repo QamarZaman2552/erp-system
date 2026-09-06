@@ -4,12 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { SearchService } from '../../core/services/search.service';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 import { Employee, Department, Designation, LinkableUser } from '../../core/models/erp.models';
 
 @Component({
   selector: 'app-employees',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="page-header-row">
       <div>
@@ -40,7 +41,7 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
       <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()" *ngIf="filterDeptId || filterStatus !== null">Clear</button>
       <button class="btn btn-sm btn-outline-primary ms-2" (click)="downloadCsv()" title="Export employees as CSV">📥 Export CSV</button>
       <div class="stats-counter ms-auto">
-        Total Staff: <strong>{{ employees().length }}</strong>
+        Total Staff: <strong>{{ totalCount() }}</strong>
       </div>
     </div>
 
@@ -120,6 +121,13 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
         </tbody>
       </table>
     </div>
+    <app-pagination
+      [page]="page()"
+      [pageSize]="pageSize()"
+      [totalCount]="totalCount()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
     }
 
     <!-- Create Employee Modal -->
@@ -323,6 +331,9 @@ export class EmployeesComponent implements OnInit {
   loading = signal(true);
   sortField = signal<string>('employeeCode');
   sortDir = signal<'asc' | 'desc'>('asc');
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
 
   newEmp: any = {
     firstName: '',
@@ -379,10 +390,13 @@ export class EmployeesComponent implements OnInit {
 
   loadEmployees(): void {
     this.loading.set(true);
-    this.api.getEmployees(1, 50, this.searchTerm(), this.filterDeptId || undefined, this.filterStatus).subscribe({
+    this.api.getEmployees(this.page(), this.pageSize(), this.searchTerm(), this.filterDeptId || undefined, this.filterStatus).subscribe({
       next: (res) => {
-        if (res?.items) { this.employees.set(res.items); this.loading.set(false); }
-        else this.loading.set(false);
+        if (res?.items) {
+          this.employees.set(res.items);
+          this.totalCount.set(res.totalCount);
+          this.loading.set(false);
+        } else this.loading.set(false);
       },
       error: () => { this.loading.set(false); this.notifications.addNotification({
         id: Math.random().toString(),
@@ -392,6 +406,17 @@ export class EmployeesComponent implements OnInit {
         timestamp: new Date()
       }) }
     });
+  }
+
+  onPageChange(p: number): void {
+    this.page.set(p);
+    this.loadEmployees();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.page.set(1);
+    this.loadEmployees();
   }
 
   loadMetadata(): void {

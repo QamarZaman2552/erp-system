@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { Expense, FinanceTransaction, Budget } from '../../core/models/erp.models';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 
 @Component({
   selector: 'app-finance',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
@@ -96,6 +97,8 @@ import { Expense, FinanceTransaction, Budget } from '../../core/models/erp.model
       </div>
     </div>
 
+    <app-pagination [page]="page()" [pageSize]="pageSize()" [totalCount]="totalCount()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
+
     <!-- Transactions View -->
     <div *ngIf="tab === 'transactions'">
       <div class="card border-0 shadow-sm p-3 mb-3">
@@ -143,6 +146,8 @@ import { Expense, FinanceTransaction, Budget } from '../../core/models/erp.model
         </div>
       </div>
     </div>
+
+    <app-pagination [page]="page()" [pageSize]="pageSize()" [totalCount]="totalCount()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
 
     <!-- Budgets View -->
     <div *ngIf="tab === 'budgets'">
@@ -311,6 +316,10 @@ export class FinanceComponent implements OnInit {
   flashMsg = signal('');
   flashIsError = false;
 
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
+
   reportYear = new Date().getFullYear();
   get currentQuarter(): number { return Math.floor(new Date().getMonth() / 3) + 1; }
   get currentMonth(): number { return new Date().getMonth() + 1; }
@@ -332,14 +341,14 @@ export class FinanceComponent implements OnInit {
   }
 
   loadData(): void {
-    this.api.getExpenses(1, 50).subscribe({ next: (res) => { if (res?.items) this.expenses.set(res.items); } });
+    this.api.getExpenses(this.page(), this.pageSize()).subscribe({ next: (res) => { if (res?.items) { this.expenses.set(res.items); this.totalCount.set(res.totalCount || 0); } } });
     this.loadTransactions();
     this.loadBudgets();
   }
 
   loadTransactions(): void {
-    this.api.getTransactions(1, 50, this.txFilter.from || undefined, this.txFilter.to || undefined, this.txFilter.type || undefined)
-      .subscribe({ next: (res) => { if (res?.items) this.transactions.set(res.items); } });
+    this.api.getTransactions(this.page(), this.pageSize(), this.txFilter.from || undefined, this.txFilter.to || undefined, this.txFilter.type || undefined)
+      .subscribe({ next: (res) => { if (res?.items) { this.transactions.set(res.items); this.totalCount.set(res.totalCount || 0); } } });
   }
 
   loadBudgets(): void {
@@ -347,6 +356,25 @@ export class FinanceComponent implements OnInit {
     const y = new Date().getFullYear();
     this.api.getBudgets(m, y).subscribe({ next: (res) => { if (res) this.budgets.set(res); } });
     this.api.budgetAlerts(m, y).subscribe({ next: (res) => this.alerts.set(res || []) });
+  }
+
+  onPageChange(newPage: number): void {
+    this.page.set(newPage);
+    if (this.tab === 'expenses') {
+      this.loadData();
+    } else if (this.tab === 'transactions') {
+      this.loadTransactions();
+    }
+  }
+
+  onPageSizeChange(newSize: number): void {
+    this.pageSize.set(newSize);
+    this.page.set(1);
+    if (this.tab === 'expenses') {
+      this.loadData();
+    } else if (this.tab === 'transactions') {
+      this.loadTransactions();
+    }
   }
 
   loadAnalytics(): void {

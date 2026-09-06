@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { ToastService } from '../../core/services/toast.service';
 import { UserAccount } from '../../core/models/erp.models';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="page-header-row">
       <div>
@@ -83,6 +84,8 @@ import { UserAccount } from '../../core/models/erp.models';
         </tbody>
       </table>
     </div>
+
+    <app-pagination [page]="page()" [pageSize]="pageSize()" [totalCount]="totalCount()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
 
     <!-- Create User Modal -->
     @if (showCreateModal()) {
@@ -231,6 +234,10 @@ export class UsersComponent implements OnInit {
   searchTerm = '';
   saving = signal(false);
 
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
+
   showCreateModal = signal(false);
   showRoleModal = signal(false);
   showResetModal = signal(false);
@@ -247,9 +254,20 @@ export class UsersComponent implements OnInit {
   }
 
   loadUsers(): void {
-    this.api.getUsers(1, 50, this.searchTerm).subscribe({
-      next: (res) => { if (res?.items) this.users.set(res.items); }
+    this.api.getUsers(this.page(), this.pageSize(), this.searchTerm).subscribe({
+      next: (res) => { if (res?.items) { this.users.set(res.items); this.totalCount.set(res.totalCount || 0); } }
     });
+  }
+
+  onPageChange(newPage: number): void {
+    this.page.set(newPage);
+    this.loadUsers();
+  }
+
+  onPageSizeChange(newSize: number): void {
+    this.pageSize.set(newSize);
+    this.page.set(1);
+    this.loadUsers();
   }
 
   onSearch(term: string): void {

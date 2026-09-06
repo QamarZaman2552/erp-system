@@ -5,11 +5,12 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { Customer, Lead } from '../../core/models/erp.models';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 
 @Component({
   selector: 'app-crm',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="page-header-row">
       <div>
@@ -168,6 +169,14 @@ import { Customer, Lead } from '../../core/models/erp.models';
       </div>
     </div>
 
+    <app-pagination
+      [page]="page()"
+      [pageSize]="pageSize()"
+      [totalCount]="totalCount()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
+
     <!-- Create Customer Modal -->
     <div class="modal d-block bg-black bg-opacity-75" tabindex="-1" *ngIf="showCustomerModal()">
       <div class="modal-dialog modal-dialog-centered">
@@ -300,6 +309,9 @@ export class CrmComponent implements OnInit {
   showCustomerModal = signal(false);
   showLeadModal = signal(false);
   editingCustomerId: string | null = null;
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
 
   selectedCustomerId: string | null = null;
   interactions = signal<any[]>([]);
@@ -345,14 +357,25 @@ export class CrmComponent implements OnInit {
   }
 
   loadData(): void {
-    this.api.getCustomers(1, 50).subscribe({
-      next: (res) => { if (res?.items) this.customers.set(res.items); },
+    this.api.getCustomers(this.page(), this.pageSize()).subscribe({
+      next: (res) => { if (res?.items) this.customers.set(res.items); if (res?.totalCount !== undefined) this.totalCount.set(res.totalCount); },
       error: () => this.notify('CRM', 'Failed to load customers.', 'error')
     });
-    this.api.getLeads(1, 50).subscribe({
-      next: (res) => { if (res?.items) this.leads.set(res.items); },
+    this.api.getLeads(this.page(), this.pageSize()).subscribe({
+      next: (res) => { if (res?.items) this.leads.set(res.items); if (res?.totalCount !== undefined) this.totalCount.set(res.totalCount); },
       error: () => this.notify('CRM', 'Failed to load leads.', 'error')
     });
+  }
+
+  onPageChange(p: number): void {
+    this.page.set(p);
+    this.loadData();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.page.set(1);
+    this.loadData();
   }
 
   openCreateModal(): void {

@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { PayrollRecord, Employee } from '../../core/models/erp.models';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 
 @Component({
   selector: 'app-payroll',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="page-header-row">
       <div>
@@ -78,6 +79,14 @@ import { PayrollRecord, Employee } from '../../core/models/erp.models';
       </table>
     </div>
 
+    <app-pagination
+      [page]="page()"
+      [pageSize]="pageSize()"
+      [totalCount]="totalCount()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
+
     <!-- Department-wise Payroll Cost -->
     <div class="erp-card p-3 mt-3" *ngIf="payrollRecords().length > 0 && deptCosts().length > 0">
       <h5 class="h6 mb-3">🏢 Department-wise Payroll Cost — {{ currentMonth }}/{{ currentYear }}</h5>
@@ -130,6 +139,10 @@ export class PayrollComponent implements OnInit {
   currentYear = new Date().getFullYear();
   employees = signal<Employee[]>([]);
 
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
+
   ngOnInit(): void {
     this.loadPayroll();
     this.api.getEmployees(1, 200).subscribe({
@@ -152,11 +165,23 @@ export class PayrollComponent implements OnInit {
   }
 
   loadPayroll(): void {
-    this.api.getPayroll(this.currentMonth, this.currentYear, 1, 50).subscribe({
+    this.api.getPayroll(this.currentMonth, this.currentYear, this.page(), this.pageSize()).subscribe({
       next: (res) => {
         if (res?.items) this.payrollRecords.set(res.items);
+        if (res?.totalCount !== undefined) this.totalCount.set(res.totalCount);
       }
     });
+  }
+
+  onPageChange(newPage: number): void {
+    this.page.set(newPage);
+    this.loadPayroll();
+  }
+
+  onPageSizeChange(newSize: number): void {
+    this.pageSize.set(newSize);
+    this.page.set(1);
+    this.loadPayroll();
   }
 
   generateMonthlyPayroll(): void {

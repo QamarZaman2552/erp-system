@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { PurchaseOrder, Supplier, Product, OrderPayment } from '../../core/models/erp.models';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 
 @Component({
   selector: 'app-purchase',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
@@ -79,6 +80,8 @@ import { PurchaseOrder, Supplier, Product, OrderPayment } from '../../core/model
         </table>
       </div>
     </div>
+
+    <app-pagination [page]="page()" [pageSize]="pageSize()" [totalCount]="totalCount()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
 
     <!-- Reports -->
     <div class="row g-4">
@@ -302,6 +305,10 @@ export class PurchaseComponent implements OnInit {
   detail = signal<any>(null);
   flash = signal('');
 
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
+
   selectedProductId = '';
   quantity = 10;
   unitPrice = 0;
@@ -339,10 +346,13 @@ export class PurchaseComponent implements OnInit {
   }
 
   loadOrders(): void {
-    this.api.getPurchaseOrders(1, 50).subscribe({
-      next: (res) => { if (res?.items) this.orders.set(res.items); }
+    this.api.getPurchaseOrders(this.page(), this.pageSize()).subscribe({
+      next: (res) => { if (res?.items) { this.orders.set(res.items); this.totalCount.set(res.totalCount); } }
     });
   }
+
+  onPageChange(p: number): void { this.page.set(p); this.loadOrders(); }
+  onPageSizeChange(size: number): void { this.pageSize.set(size); this.page.set(1); this.loadOrders(); }
 
   loadReports(): void {
     this.api.purchaseMonthlyReport(this.reportYear).subscribe({ next: (r) => this.monthlyReport.set(r || []) });

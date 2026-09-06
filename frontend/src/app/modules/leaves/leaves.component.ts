@@ -5,11 +5,12 @@ import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
 import { NotificationService } from '../../core/services/notification.service';
 import { LeaveRequest, Employee } from '../../core/models/erp.models';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 
 @Component({
   selector: 'app-leaves',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="page-header-row">
       <div>
@@ -95,6 +96,14 @@ import { LeaveRequest, Employee } from '../../core/models/erp.models';
         </tbody>
       </table>
     </div>
+
+    <app-pagination
+      [page]="page()"
+      [pageSize]="pageSize()"
+      [totalCount]="totalCount()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)">
+    </app-pagination>
 
     <!-- On-Leave Calendar + Department Report -->
     <div class="row g-3 mt-1">
@@ -327,6 +336,9 @@ export class LeavesComponent implements OnInit {
   leaves = signal<LeaveRequest[]>([]);
   employees = signal<Employee[]>([]);
   showModal = signal(false);
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
 
   pendingCount = computed(() => this.leaves().filter(l => l.status === 'Pending').length);
   approvedCount = computed(() => this.leaves().filter(l => l.status === 'Approved').length);
@@ -347,9 +359,12 @@ export class LeavesComponent implements OnInit {
   }
 
   loadLeaves(): void {
-    this.api.getLeaves(1, 50).subscribe({
+    this.api.getLeaves(this.page(), this.pageSize()).subscribe({
       next: (res) => {
-        if (res?.items) this.leaves.set(res.items);
+        if (res?.items) {
+          this.leaves.set(res.items);
+          this.totalCount.set(res.totalCount);
+        }
       }
     });
   }
@@ -471,6 +486,17 @@ export class LeavesComponent implements OnInit {
 
   canApprove(): boolean {
     return this.auth.hasRole(['Admin', 'HR', 'Manager']);
+  }
+
+  onPageChange(p: number): void {
+    this.page.set(p);
+    this.loadLeaves();
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.page.set(1);
+    this.loadLeaves();
   }
 
   getStatusBadge(status: string): string {

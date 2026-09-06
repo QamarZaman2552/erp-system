@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { AuthService } from '../../core/services/auth.service';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 
 @Component({
   selector: 'app-documents',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
@@ -84,6 +85,14 @@ import { AuthService } from '../../core/services/auth.service';
       </div>
     </div>
 
+    <app-pagination
+      [page]="page()"
+      [pageSize]="pageSize()"
+      [totalCount]="totalCount()"
+      (pageChange)="onPageChange($event)"
+      (pageSizeChange)="onPageSizeChange($event)"
+    />
+
     <!-- Upload Modal -->
     <div class="modal d-block bg-black bg-opacity-75" tabindex="-1" *ngIf="showModal()">
       <div class="modal-dialog modal-dialog-centered">
@@ -153,6 +162,10 @@ export class DocumentsComponent implements OnInit {
   uploadForm = { entityType: 'Employee', entityId: '', expiryDate: '' };
   private searchTimer: any;
 
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
+
   ngOnInit(): void {
     this.load();
     this.api.getExpiringDocuments(30).subscribe({ next: list => this.expiring.set(list || []) });
@@ -165,9 +178,23 @@ export class DocumentsComponent implements OnInit {
   isAdmin(): boolean { return this.auth.hasRole(['Admin']); }
 
   load(): void {
-    this.api.getDocuments(1, 50, this.search || undefined, undefined, this.mineOnly).subscribe({
-      next: res => { if (res?.items) this.docs.set(res.items); }
+    this.api.getDocuments(this.page(), this.pageSize(), this.search || undefined, undefined, this.mineOnly).subscribe({
+      next: res => {
+        if (res?.items) this.docs.set(res.items);
+        if (res?.totalCount !== undefined) this.totalCount.set(res.totalCount);
+      }
     });
+  }
+
+  onPageChange(newPage: number): void {
+    this.page.set(newPage);
+    this.load();
+  }
+
+  onPageSizeChange(newSize: number): void {
+    this.pageSize.set(newSize);
+    this.page.set(1);
+    this.load();
   }
 
   toggleMine(mine: boolean): void {

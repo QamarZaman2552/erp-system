@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../core/services/api.service';
 import { Product } from '../../core/models/erp.models';
+import { PaginationComponent } from '../../shared/components/pagination.component';
 
 @Component({
   selector: 'app-inventory',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, PaginationComponent],
   template: `
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
@@ -88,6 +89,8 @@ import { Product } from '../../core/models/erp.models';
         </table>
       </div>
     </div>
+
+    <app-pagination [page]="page()" [pageSize]="pageSize()" [totalCount]="totalCount()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
 
     <!-- Category-wise Report -->
     <div class="card p-3 mt-3" *ngIf="catReport().length > 0">
@@ -185,6 +188,10 @@ export class InventoryComponent implements OnInit {
   showAdjustModal = signal(false);
   showCreateModal = signal(false);
 
+  page = signal(1);
+  pageSize = signal(25);
+  totalCount = signal(0);
+
   adjustData = {
     productId: '',
     quantity: 10,
@@ -200,10 +207,11 @@ export class InventoryComponent implements OnInit {
   }
 
   loadProducts(): void {
-    this.api.getProducts(1, 50).subscribe({
+    this.api.getProducts(this.page(), this.pageSize()).subscribe({
       next: (res) => {
         if (res?.items) {
           this.products.set(res.items);
+          this.totalCount.set(res.totalCount || 0);
           if (res.items.length > 0 && !this.adjustData.productId) {
             this.adjustData.productId = res.items[0].id;
           }
@@ -219,6 +227,17 @@ export class InventoryComponent implements OnInit {
         this.loadProducts();
       }
     });
+  }
+
+  onPageChange(newPage: number): void {
+    this.page.set(newPage);
+    this.loadProducts();
+  }
+
+  onPageSizeChange(newSize: number): void {
+    this.pageSize.set(newSize);
+    this.page.set(1);
+    this.loadProducts();
   }
 
   categories = signal<any[]>([]);
