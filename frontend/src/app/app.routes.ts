@@ -108,6 +108,12 @@ export const routes: Routes = [
     loadComponent: () => import('./modules/documents/documents.component').then(m => m.DocumentsComponent)
   },
   {
+    path: 'email-templates',
+    canActivate: [authGuard],
+    data: { roles: ['Admin'] },
+    loadComponent: () => import('./modules/settings/email-template-preview.component').then(m => m.EmailTemplatePreviewComponent)
+  },
+  {
     path: '**',
     redirectTo: 'dashboard'
   }

@@ -671,4 +671,9 @@ export class ApiService {
   toggleRecurringTask(id: string): Observable<ApiResponse<RecurringTask>> {
     return this.http.post<ApiResponse<RecurringTask>>(`${this.baseUrl}/tasks/recurring/${id}/toggle`, {});
   }
+
+  // ─── Email Templates ──────────────────────────────────────────────────────
+  getEmailTemplates(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/email-templates`);
+  }
 }

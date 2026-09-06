@@ -678,6 +678,222 @@ public class DocumentsController(
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+public class EmailTemplatesController : ControllerBase
+{
+    [HttpGet]
+    public IActionResult GetAll()
+    {
+        var templates = new[]
+        {
+            new
+            {
+                id = "password-reset",
+                name = "Password Reset",
+                subject = "Enterprise ERP — Password Reset",
+                description = "Sent when a user requests a password reset link.",
+                htmlContent = """
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#0f172a;color:#f1f5f9;border-radius:16px">
+                      <h2 style="color:#6366f1;margin-bottom:16px">🔑 Password Reset</h2>
+                      <p>Click the button below to reset your password. This link expires in 1 hour.</p>
+                      <a href="{{resetLink}}" style="display:inline-block;background:#6366f1;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;margin:24px 0;font-weight:600">Reset Password</a>
+                      <p style="color:#94a3b8;font-size:13px">If you didn't request a password reset, ignore this email.</p>
+                    </div>
+                    """,
+                sampleData = new Dictionary<string, string>
+                {
+                    { "resetLink", "https://erp.company.com/reset-password?token=abc123" }
+                }
+            },
+            new
+            {
+                id = "leave-approved",
+                name = "Leave Approved",
+                subject = "Leave Request Approved ✅",
+                description = "Sent when a leave request is approved by HR/Manager.",
+                htmlContent = """
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#f0fdf4;color:#1a1a2e;border-radius:16px;border:1px solid #bbf7d0">
+                      <h2 style="color:#16a34a;margin-bottom:16px">✅ Leave Approved</h2>
+                      <p>Dear {{employeeName}},</p>
+                      <p>Your leave request has been <strong style="color:#16a34a">Approved</strong>.</p>
+                      <div style="background:#dcfce7;padding:16px;border-radius:8px;margin:16px 0">
+                        <p style="margin:4px 0"><strong>From:</strong> {{startDate}}</p>
+                        <p style="margin:4px 0"><strong>To:</strong> {{endDate}}</p>
+                        <p style="margin:4px 0"><strong>Days:</strong> {{totalDays}}</p>
+                      </div>
+                      <p style="color:#64748b;font-size:13px">Enjoy your time off!</p>
+                    </div>
+                    """,
+                sampleData = new Dictionary<string, string>
+                {
+                    { "employeeName", "Ahmed Khan" },
+                    { "startDate", "2026-09-15" },
+                    { "endDate", "2026-09-19" },
+                    { "totalDays", "5" }
+                }
+            },
+            new
+            {
+                id = "leave-rejected",
+                name = "Leave Rejected",
+                subject = "Leave Request Rejected ❌",
+                description = "Sent when a leave request is rejected by HR/Manager.",
+                htmlContent = """
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fef2f2;color:#1a1a2e;border-radius:16px;border:1px solid #fecaca">
+                      <h2 style="color:#dc2626;margin-bottom:16px">❌ Leave Rejected</h2>
+                      <p>Dear {{employeeName}},</p>
+                      <p>Your leave request has been <strong style="color:#dc2626">Rejected</strong>.</p>
+                      <div style="background:#fee2e2;padding:16px;border-radius:8px;margin:16px 0">
+                        <p style="margin:4px 0"><strong>From:</strong> {{startDate}}</p>
+                        <p style="margin:4px 0"><strong>To:</strong> {{endDate}}</p>
+                        <p style="margin:4px 0"><strong>Reason:</strong> {{rejectionReason}}</p>
+                      </div>
+                      <p style="color:#64748b;font-size:13px">Please contact HR for more information.</p>
+                    </div>
+                    """,
+                sampleData = new Dictionary<string, string>
+                {
+                    { "employeeName", "Sara Ali" },
+                    { "startDate", "2026-10-01" },
+                    { "endDate", "2026-10-05" },
+                    { "rejectionReason", "Peak business period — limited staffing" }
+                }
+            },
+            new
+            {
+                id = "payslip",
+                name = "Payslip Delivery",
+                subject = "Your Payslip",
+                description = "Sent with payslip PDF attached when payroll is processed.",
+                htmlContent = """
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#ffffff;color:#1a1a2e;border-radius:16px;border:1px solid #e2e8f0">
+                      <h2 style="color:#6366f1;margin-bottom:16px">💰 Payslip</h2>
+                      <p>Dear {{employeeName}},</p>
+                      <p>Please find your payslip for <strong>{{payPeriod}}</strong> attached to this email.</p>
+                      <div style="background:#f1f5f9;padding:16px;border-radius:8px;margin:16px 0">
+                        <p style="margin:4px 0"><strong>Employee:</strong> {{employeeName}}</p>
+                        <p style="margin:4px 0"><strong>Period:</strong> {{payPeriod}}</p>
+                        <p style="margin:4px 0"><strong>Net Pay:</strong> {{netPay}}</p>
+                      </div>
+                      <p style="color:#64748b;font-size:13px">For any queries, please contact the HR department.</p>
+                    </div>
+                    """,
+                sampleData = new Dictionary<string, string>
+                {
+                    { "employeeName", "Bilal Ahmed" },
+                    { "payPeriod", "August 2026" },
+                    { "netPay", "PKR 185,000" }
+                }
+            },
+            new
+            {
+                id = "sales-invoice",
+                name = "Sales Invoice",
+                subject = "Invoice #{{invoiceNumber}}",
+                description = "Sent when emailing a sales invoice to a customer.",
+                htmlContent = """
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#ffffff;color:#1a1a2e;border-radius:16px;border:1px solid #e2e8f0">
+                      <div style="background:#6366f1;color:#fff;padding:24px;border-radius:12px;margin-bottom:24px">
+                        <h2 style="margin:0">📄 Invoice #{{invoiceNumber}}</h2>
+                        <p style="margin:8px 0 0;opacity:0.8">Enterprise ERP System</p>
+                      </div>
+                      <p>Dear {{customerName}},</p>
+                      <p>Please find your invoice details below:</p>
+                      <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                        <tr style="background:#f1f5f9">
+                          <td style="padding:10px;font-weight:600">Description</td>
+                          <td style="padding:10px;text-align:right;font-weight:600">Amount</td>
+                        </tr>
+                        {{lineItems}}
+                      </table>
+                      <div style="background:#6366f1;color:#fff;padding:16px;border-radius:8px;text-align:right;font-size:18px;font-weight:700">
+                        Total: {{totalAmount}}
+                      </div>
+                      <p style="color:#64748b;font-size:13px;margin-top:16px">Thank you for your business!</p>
+                    </div>
+                    """,
+                sampleData = new Dictionary<string, string>
+                {
+                    { "invoiceNumber", "INV-2026-0042" },
+                    { "customerName", "Tech Solutions Pvt Ltd" },
+                    { "lineItems", "<tr><td style='padding:10px;border-bottom:1px solid #e2e8f0'>Web Development Services</td><td style='padding:10px;text-align:right;border-bottom:1px solid #e2e8f0'>PKR 250,000</td></tr><tr><td style='padding:10px;border-bottom:1px solid #e2e8f0'>UI/UX Design</td><td style='padding:10px;text-align:right;border-bottom:1px solid #e2e8f0'>PKR 85,000</td></tr>" },
+                    { "totalAmount", "PKR 335,000" }
+                }
+            },
+            new
+            {
+                id = "overdue-reminder",
+                name = "Overdue Payment Reminder",
+                subject = "⚠️ Payment Overdue — {{invoiceNumber}}",
+                description = "Sent as a reminder for overdue invoice payments.",
+                htmlContent = """
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#fffbeb;color:#1a1a2e;border-radius:16px;border:1px solid #fde68a">
+                      <h2 style="color:#d97706;margin-bottom:16px">⚠️ Payment Overdue</h2>
+                      <p>Dear {{customerName}},</p>
+                      <p>This is a friendly reminder that your payment for invoice <strong>{{invoiceNumber}}</strong> is <strong style="color:#dc2626">{{daysOverdue}} days overdue</strong>.</p>
+                      <div style="background:#fef3c7;padding:16px;border-radius:8px;margin:16px 0">
+                        <p style="margin:4px 0"><strong>Invoice:</strong> {{invoiceNumber}}</p>
+                        <p style="margin:4px 0"><strong>Amount Due:</strong> {{totalAmount}}</p>
+                        <p style="margin:4px 0"><strong>Due Date:</strong> {{dueDate}}</p>
+                        <p style="margin:4px 0"><strong>Days Overdue:</strong> {{daysOverdue}}</p>
+                      </div>
+                      <p>Please settle the outstanding amount at your earliest convenience.</p>
+                      <p style="color:#64748b;font-size:13px">If you've already paid, please disregard this reminder.</p>
+                    </div>
+                    """,
+                sampleData = new Dictionary<string, string>
+                {
+                    { "customerName", "Global Traders" },
+                    { "invoiceNumber", "INV-2026-0038" },
+                    { "totalAmount", "PKR 425,000" },
+                    { "dueDate", "2026-08-15" },
+                    { "daysOverdue", "22" }
+                }
+            },
+            new
+            {
+                id = "po-to-supplier",
+                name = "Purchase Order to Supplier",
+                subject = "Purchase Order #{{poNumber}}",
+                description = "Sent when emailing a purchase order to a supplier.",
+                htmlContent = """
+                    <div style="font-family:Inter,sans-serif;max-width:600px;margin:auto;padding:32px;background:#ffffff;color:#1a1a2e;border-radius:16px;border:1px solid #e2e8f0">
+                      <div style="background:#0f172a;color:#fff;padding:24px;border-radius:12px;margin-bottom:24px">
+                        <h2 style="margin:0">📦 Purchase Order #{{poNumber}}</h2>
+                        <p style="margin:8px 0 0;opacity:0.8">Enterprise ERP System</p>
+                      </div>
+                      <p>Dear {{supplierName}},</p>
+                      <p>Please find our purchase order details below:</p>
+                      <table style="width:100%;border-collapse:collapse;margin:16px 0">
+                        <tr style="background:#f1f5f9">
+                          <td style="padding:10px;font-weight:600">Item</td>
+                          <td style="padding:10px;text-align:center;font-weight:600">Qty</td>
+                          <td style="padding:10px;text-align:right;font-weight:600">Unit Price</td>
+                        </tr>
+                        {{lineItems}}
+                      </table>
+                      <div style="background:#0f172a;color:#fff;padding:16px;border-radius:8px;text-align:right;font-size:18px;font-weight:700">
+                        Total: {{totalAmount}}
+                      </div>
+                      <p style="color:#64748b;font-size:13px;margin-top:16px">Please confirm receipt of this order.</p>
+                    </div>
+                    """,
+                sampleData = new Dictionary<string, string>
+                {
+                    { "poNumber", "PO-2026-0015" },
+                    { "supplierName", "Raw Materials Co." },
+                    { "lineItems", "<tr><td style='padding:10px;border-bottom:1px solid #e2e8f0'>Steel Sheets (4mm)</td><td style='padding:10px;text-align:center;border-bottom:1px solid #e2e8f0'>200</td><td style='padding:10px;text-align:right;border-bottom:1px solid #e2e8f0'>PKR 4,500</td></tr><tr><td style='padding:10px;border-bottom:1px solid #e2e8f0'>Aluminum Bars</td><td style='padding:10px;text-align:center;border-bottom:1px solid #e2e8f0'>150</td><td style='padding:10px;text-align:right;border-bottom:1px solid #e2e8f0'>PKR 3,200</td></tr>" },
+                    { "totalAmount", "PKR 1,380,000" }
+                }
+            }
+        };
+
+        return Ok(templates);
+    }
+}
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
 public class SuppliersController : ControllerBase
 {
     private readonly ISupplierService _supplierService;

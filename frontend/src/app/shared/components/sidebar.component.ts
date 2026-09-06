@@ -113,6 +113,13 @@ import { UiService } from '../../core/services/ui.service';
           <span class="nav-icon">📁</span>
           <span class="nav-text">Documents</span>
         </a>
+
+        <div class="nav-label" *ngIf="canAccessAdmin()">SETTINGS</div>
+
+        <a routerLink="/email-templates" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessAdmin()">
+          <span class="nav-icon">📧</span>
+          <span class="nav-text">Email Templates</span>
+        </a>
       </nav>
 
       <!-- User Profile Badge -->
