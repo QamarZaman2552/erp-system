@@ -120,6 +120,9 @@ export interface LeaveRequest {
   totalDays: number;
   reason: string;
   status: 'Pending' | 'Approved' | 'Rejected' | 'Cancelled';
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectionReason?: string;
   createdAt: string;
 }
 

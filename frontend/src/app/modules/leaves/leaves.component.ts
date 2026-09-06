@@ -51,8 +51,7 @@ import { LeaveRequest, Employee } from '../../core/models/erp.models';
             <th>Dates</th>
             <th>Days</th>
             <th>Reason</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th>Status / Approval</th>
           </tr>
         </thead>
         <tbody>
@@ -65,19 +64,31 @@ import { LeaveRequest, Employee } from '../../core/models/erp.models';
             <td class="font-semibold">{{ leave.totalDays }} day(s)</td>
             <td class="text-sm text-gray-300">{{ leave.reason }}</td>
             <td>
-              <span class="badge" [ngClass]="getStatusBadge(leave.status)">{{ leave.status }}</span>
-            </td>
-            <td>
-              <div class="action-btn-group" *ngIf="leave.status === 'Pending' && canApprove()">
-                <button class="btn btn-sm btn-success" (click)="approve(leave.id, true)">✓ Approve</button>
-                <button class="btn btn-sm btn-danger" (click)="approve(leave.id, false)">✕ Reject</button>
+              <div class="mini-flow" [class.mini-flow-pending]="leave.status === 'Pending'" [class.mini-flow-approved]="leave.status === 'Approved'" [class.mini-flow-rejected]="leave.status === 'Rejected'">
+                <div class="mini-flow-step" [class.active]="leave.status !== 'Pending'">
+                  <span class="mini-flow-dot"></span>
+                  <span class="mini-flow-label">Submitted</span>
+                </div>
+                <div class="mini-flow-arrow"></div>
+                <div class="mini-flow-step" [class.active]="leave.status === 'Approved'" [class.rejected]="leave.status === 'Rejected'">
+                  <span class="mini-flow-dot"></span>
+                  <span class="mini-flow-label">{{ leave.status === 'Approved' ? 'Approved' : leave.status === 'Rejected' ? 'Rejected' : '…' }}</span>
+                </div>
+              </div>
+              <div *ngIf="leave.approvedBy || leave.rejectionReason" class="mini-flow-detail">
+                <span *ngIf="leave.approvedBy" class="text-xs text-success">✓ {{ leave.approvedBy }}{{ leave.approvedAt ? ' on ' + leave.approvedAt : '' }}</span>
+                <span *ngIf="leave.rejectionReason" class="text-xs text-danger">✕ {{ leave.rejectionReason }}</span>
+              </div>
+              <div class="action-btn-group mt-1" *ngIf="leave.status === 'Pending' && canApprove()">
+                <button class="btn btn-sm btn-success" (click)="approve(leave.id, true)">✓</button>
+                <button class="btn btn-sm btn-danger" (click)="approve(leave.id, false)">✕</button>
               </div>
               <span class="text-xs text-gray-500" *ngIf="leave.status !== 'Pending'">Processed</span>
             </td>
           </tr>
 
           <tr *ngIf="leaves().length === 0">
-            <td colspan="7" class="text-center py-8 text-gray-400">
+            <td colspan="6" class="text-center py-8 text-gray-400">
               No leave requests currently found.
             </td>
           </tr>
@@ -240,6 +251,70 @@ import { LeaveRequest, Employee } from '../../core/models/erp.models';
     .text-gray-500 { color: var(--text-muted); }
     .text-center { text-align: center; }
     .py-8 { padding-top: 32px; padding-bottom: 32px; }
+
+    .mini-flow {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+    }
+
+    .mini-flow-step {
+      display: flex;
+      align-items: center;
+      gap: 3px;
+      opacity: 0.4;
+    }
+
+    .mini-flow-step.active {
+      opacity: 1;
+    }
+
+    .mini-flow-step.rejected {
+      opacity: 1;
+    }
+
+    .mini-flow-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      display: inline-block;
+    }
+
+    .mini-flow-step.active .mini-flow-dot {
+      background: var(--success);
+    }
+
+    .mini-flow-step.rejected .mini-flow-dot {
+      background: var(--danger);
+    }
+
+    .mini-flow-label {
+      color: var(--text-muted);
+      font-size: 10px;
+    }
+
+    .mini-flow-step.active .mini-flow-label {
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    .mini-flow-arrow {
+      color: var(--text-muted);
+      font-size: 8px;
+    }
+
+    .mini-flow-detail {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+      flex-wrap: wrap;
+    }
+
+    .mini-flow.mini-flow-pending .mini-flow-label {
+      color: var(--warning);
+    }
   `]
 })
 export class LeavesComponent implements OnInit {
@@ -319,13 +394,19 @@ export class LeavesComponent implements OnInit {
         return;
       }
       this.api.approveLeave(id, false, reason.trim()).subscribe({
-        next: () => this.loadLeaves(),
+        next: (res) => {
+          if (res?.data) this.leaves.update(list => list.map(l => l.id === id ? res.data! : l));
+          this.loadLeaves();
+        },
         error: (err) => this.notifications.addNotification({ id: Math.random().toString(), title: 'Leave', message: err?.error?.message || 'Rejection failed.', type: 'error', timestamp: new Date() })
       });
       return;
     }
     this.api.approveLeave(id, true).subscribe({
-      next: () => this.loadLeaves(),
+      next: (res) => {
+        if (res?.data) this.leaves.update(list => list.map(l => l.id === id ? res.data! : l));
+        this.loadLeaves();
+      },
       error: (err) => this.notifications.addNotification({ id: Math.random().toString(), title: 'Leave', message: err?.error?.message || 'Approval failed.', type: 'error', timestamp: new Date() })
     });
   }
