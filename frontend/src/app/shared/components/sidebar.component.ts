@@ -9,7 +9,9 @@ import { UiService } from '../../core/services/ui.service';
   standalone: true,
   imports: [CommonModule, RouterModule],
   template: `
-    <aside class="sidebar-container">
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" *ngIf="ui.sidebarOpen()" (click)="ui.closeSidebar()"></div>
+    <aside class="sidebar-container" [class.open]="ui.sidebarOpen()">
       <!-- Brand Logo -->
       <div class="brand-header">
         <div class="logo-icon"><i class="bi bi-grid-3x3-gap-fill"></i></div>
@@ -268,11 +270,43 @@ import { UiService } from '../../core/services/ui.service';
       padding: 1px 6px;
       margin-top: 2px;
     }
+
+    .sidebar-overlay {
+      display: none;
+    }
+
+    @media (max-width: 991.98px) {
+      .sidebar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 1050;
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+      }
+
+      .sidebar-container.open {
+        transform: translateX(0);
+      }
+
+      .sidebar-overlay {
+        display: block;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 1040;
+        backdrop-filter: blur(4px);
+      }
+    }
   `]
 })
 export class SidebarComponent {
   private auth = inject(AuthService);
-  private ui = inject(UiService);
+  ui = inject(UiService);
   user = this.auth.currentUser;
 
   onNavClick(): void {
