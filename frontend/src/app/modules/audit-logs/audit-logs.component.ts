@@ -74,7 +74,7 @@ import { ApiService } from '../../core/services/api.service';
               <td><small class="font-monospace text-secondary">{{ shortId(log.entityId) }}</small></td>
               <td><small>{{ log.ipAddress || '-' }}</small></td>
               <td>
-                <button class="btn btn-sm btn-outline-secondary py-0 px-2" *ngIf="log.newValues" (click)="showDetail(log)" title="Payload">👁</button>
+                <button class="btn btn-sm btn-outline-secondary py-0 px-2" *ngIf="log.newValues" (click)="showDetail(log)" title="Payload"><i class="bi bi-eye"></i></button>
               </td>
             </tr>
             <tr *ngIf="logs().length === 0">

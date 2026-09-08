@@ -64,7 +64,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
                   Mark Paid
                 </button>
                 <a class="btn btn-sm btn-secondary" [href]="'https://localhost:7001/api/payroll/' + p.id + '/payslip'" target="_blank">
-                  📄 Payslip
+                  <i class="bi bi-file-earmark-pdf"></i> Payslip
                 </a>
               </div>
             </td>
@@ -89,7 +89,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
 
     <!-- Department-wise Payroll Cost -->
     <div class="erp-card p-3 mt-3" *ngIf="payrollRecords().length > 0 && deptCosts().length > 0">
-      <h5 class="h6 mb-3">🏢 Department-wise Payroll Cost — {{ currentMonth }}/{{ currentYear }}</h5>
+      <h5 class="h6 mb-3"><i class="bi bi-building"></i> Department-wise Payroll Cost — {{ currentMonth }}/{{ currentYear }}</h5>
       <table class="erp-table">
         <thead>
           <tr>

@@ -19,10 +19,10 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
       </div>
       <div class="header-buttons">
         <button class="btn btn-secondary" (click)="activeTab = 'customers'" [class.active-tab]="activeTab === 'customers'">
-          🏢 Customers
+          <i class="bi bi-building"></i> Customers
         </button>
         <button class="btn btn-secondary" (click)="activeTab = 'leads'" [class.active-tab]="activeTab === 'leads'">
-          🎯 Deals &amp; Leads Pipeline
+          <i class="bi bi-bullseye"></i> Deals &amp; Leads Pipeline
         </button>
         <button class="btn btn-primary" (click)="openCreateModal()">
           <span>+ Add {{ activeTab === 'customers' ? 'Customer' : 'Lead' }}</span>
@@ -74,7 +74,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
                 <td class="small">{{ i.interactionDate | date:'MMM d, y' }}</td>
                 <td><span class="badge badge-info small">{{ i.type }}</span></td>
                 <td class="small fw-semibold">{{ i.subject }}<div class="text-xs text-gray-400">{{ i.notes }}</div></td>
-                <td class="small" *ngIf="i.followUpDate"><span class="badge badge-warning">🔔 {{ i.followUpDate | date:'MMM d' }}</span></td>
+                <td class="small" *ngIf="i.followUpDate"><span class="badge badge-warning"><i class="bi bi-bell"></i> {{ i.followUpDate | date:'MMM d' }}</span></td>
                 <td *ngIf="!i.followUpDate">—</td>
               </tr>
             </tbody>
@@ -111,8 +111,8 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
                 <span class="badge badge-neutral" *ngIf="!c.isActive">Inactive</span>
               </td>
               <td>
-                <button class="btn btn-sm btn-outline-primary py-0 px-1 me-1" title="Edit" (click)="editCustomer(c)">✏️</button>
-                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Archive" (click)="archiveCustomer(c)">🗑️</button>
+                <button class="btn btn-sm btn-outline-primary py-0 px-1 me-1" title="Edit" (click)="editCustomer(c)"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Archive" (click)="archiveCustomer(c)"><i class="bi bi-trash"></i></button>
               </td>
             </tr>
           </tbody>

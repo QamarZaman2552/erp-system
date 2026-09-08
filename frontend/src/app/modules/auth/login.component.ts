@@ -14,18 +14,18 @@ import { ApiService } from '../../core/services/api.service';
       <div class="login-card">
         <!-- Logo & Header -->
         <div class="login-header">
-          <div class="logo-box">🏢</div>
+          <div class="logo-box"><i class="bi bi-grid-3x3-gap-fill"></i></div>
           <h1>Enterprise ERP</h1>
           <p>Business Operations &amp; Resource Management</p>
         </div>
 
         <!-- Error Alert -->
         <div class="alert-box alert-error" *ngIf="errorMessage()">
-          <span>⚠️</span> {{ errorMessage() }}
+          <span><i class="bi bi-exclamation-triangle-fill"></i></span> {{ errorMessage() }}
         </div>
 
         <div class="alert-box alert-success" *ngIf="resetSent()" style="border-color: rgba(25,135,84,.4); background: rgba(25,135,84,.1); color: #75dfae;">
-          <span>✉️</span> {{ resetSent() }}
+          <span><i class="bi bi-envelope-check-fill"></i></span> {{ resetSent() }}
         </div>
 
         <!-- Forgot Password Form -->
@@ -85,10 +85,10 @@ import { ApiService } from '../../core/services/api.service';
           <span class="quick-title">Quick Demo Logins:</span>
           <div class="demo-buttons">
             <button class="demo-btn" (click)="setCredentials('admin@company.com', 'Admin@1234')">
-              👑 Admin
+              <i class="bi bi-crown"></i> Admin
             </button>
             <button class="demo-btn" (click)="setCredentials('hr@company.com', 'Hr@12345')">
-              💼 HR Manager
+              <i class="bi bi-briefcase"></i> HR Manager
             </button>
           </div>
         </div>

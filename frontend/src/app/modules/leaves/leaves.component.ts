@@ -138,7 +138,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
       </div>
       <div class="col-md-5">
         <div class="erp-card p-3 h-100">
-          <h5 class="h6 mb-3">📊 Department-wise Leave ({{ monthLabel() }})</h5>
+          <h5 class="h6 mb-3"><i class="bi bi-bar-chart"></i> Department-wise Leave ({{ monthLabel() }})</h5>
           <table class="erp-table" *ngIf="deptSummary().length > 0; else noDept">
             <thead>
               <tr>

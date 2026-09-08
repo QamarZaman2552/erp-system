@@ -140,7 +140,7 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
 
       <!-- Department-wise Comparison -->
       <div class="erp-card p-3 mt-3">
-        <h5 class="h6 mb-3">🏢 Department-wise Comparison ({{ monthNames[reportMonth - 1] }} {{ reportYear }})</h5>
+        <h5 class="h6 mb-3"><i class="bi bi-building"></i> Department-wise Comparison ({{ monthNames[reportMonth - 1] }} {{ reportYear }})</h5>
         <table class="erp-table">
           <thead>
             <tr><th>Department</th><th class="text-center">Employees</th><th class="text-center">Present Days</th><th class="text-center">Late Days</th><th class="text-center">Leave Days</th><th class="text-center">Total Hours</th><th class="text-center">Overtime Hrs</th></tr>
@@ -179,7 +179,7 @@ import { AttendanceRecord, Employee } from '../../core/models/erp.models';
               </tr>
             }
             <tr *ngIf="lateArrivals().length === 0">
-              <td colspan="4" class="text-center py-8 text-gray-400">No late arrivals this month. 🎉</td>
+              <td colspan="4" class="text-center py-8 text-gray-400">No late arrivals this month. <i class="bi bi-check-circle"></i></td>
             </tr>
           </tbody>
         </table>

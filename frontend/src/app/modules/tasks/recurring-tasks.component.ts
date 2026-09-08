@@ -53,7 +53,7 @@ import { RecurringTask } from '../../core/models/erp.models';
       <!-- Task Cards -->
       @if (filteredTasks().length === 0) {
       <div class="empty-state-card">
-        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-icon"><i class="bi bi-clipboard-x"></i></div>
         <div class="font-semibold">No recurring tasks found</div>
         <div class="text-sm text-gray-400">Create a new recurring task to get started.</div>
       </div>
@@ -71,23 +71,26 @@ import { RecurringTask } from '../../core/models/erp.models';
           <div class="task-card-body">
             <div *ngIf="task.description" class="task-description">{{ task.description }}</div>
             <div class="task-meta">
-              <span class="task-meta-item">📅 Start: {{ task.startDate | date:'mediumDate' }}</span>
-              <span *ngIf="task.endDate" class="task-meta-item">🏁 End: {{ task.endDate | date:'mediumDate' }}</span>
-              <span class="task-meta-item">🔄 Next: {{ task.nextExecutionDate | date:'mediumDate' }}</span>
+              <span class="task-meta-item"><i class="bi bi-calendar-event"></i> Start: {{ task.startDate | date:'mediumDate' }}</span>
+              <span *ngIf="task.endDate" class="task-meta-item"><i class="bi bi-flag"></i> End: {{ task.endDate | date:'mediumDate' }}</span>
+              <span class="task-meta-item"><i class="bi bi-arrow-repeat"></i> Next: {{ task.nextExecutionDate | date:'mediumDate' }}</span>
             </div>
             <div *ngIf="task.category" class="task-category">Category: {{ task.category }}</div>
           </div>
           <div class="task-card-footer">
             <span class="task-progress">Completed: {{ task.completedCount }} times</span>
             <div class="action-btn-group">
-              <button class="btn btn-sm btn-secondary" (click)="toggleTask(task)" title="Toggle active">
-                {{ task.isActive ? '⏸️ Pause' : '▶️ Resume' }}
+              <button *ngIf="task.isActive" class="btn btn-sm btn-secondary" (click)="toggleTask(task)" title="Pause">
+                <i class="bi bi-pause-circle"></i> Pause
+              </button>
+              <button *ngIf="!task.isActive" class="btn btn-sm btn-secondary" (click)="toggleTask(task)" title="Resume">
+                <i class="bi bi-play-circle"></i> Resume
               </button>
               <button class="btn btn-sm btn-outline-primary" (click)="openEdit(task)" title="Edit">
-                ✏️ Edit
+                <i class="bi bi-pencil"></i> Edit
               </button>
               <button class="btn btn-sm btn-danger" (click)="deleteTask(task.id)" title="Delete">
-                🗑️
+                <i class="bi bi-trash"></i>
               </button>
             </div>
           </div>

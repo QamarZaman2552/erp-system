@@ -19,7 +19,7 @@ import { TeamMember, ProjectTask, AttendanceRecord } from '../../core/models/erp
     <div class="row g-3 mb-4">
       <div class="col-md-4">
         <div class="card p-3 d-flex align-items-center gap-3">
-          <span class="metric-icon bg-primary bg-opacity-25 text-primary">👥</span>
+          <span class="metric-icon bg-primary bg-opacity-25 text-primary"><i class="bi bi-people-fill"></i></span>
           <div>
             <div class="metric-value">{{ team().length }}</div>
             <div class="metric-title">Team Members</div>
@@ -28,7 +28,7 @@ import { TeamMember, ProjectTask, AttendanceRecord } from '../../core/models/erp
       </div>
       <div class="col-md-4">
         <div class="card p-3 d-flex align-items-center gap-3">
-          <span class="metric-icon bg-danger bg-opacity-25 text-danger">⚠️</span>
+          <span class="metric-icon bg-danger bg-opacity-25 text-danger"><i class="bi bi-exclamation-triangle-fill"></i></span>
           <div>
             <div class="metric-value">{{ overdueTasks().length }}</div>
             <div class="metric-title">Overdue Tasks</div>
@@ -37,7 +37,7 @@ import { TeamMember, ProjectTask, AttendanceRecord } from '../../core/models/erp
       </div>
       <div class="col-md-4">
         <div class="card p-3 d-flex align-items-center gap-3">
-          <span class="metric-icon bg-success bg-opacity-25 text-success">📋</span>
+          <span class="metric-icon bg-success bg-opacity-25 text-success"><i class="bi bi-clipboard-check-fill"></i></span>
           <div>
             <div class="metric-value">{{ totalActiveTasks() }}</div>
             <div class="metric-title">Active Task Assignments</div>

@@ -22,7 +22,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
 
       <!-- Search or Page Indicator -->
       <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon"><i class="bi bi-search"></i></span>
         <input type="text" [ngModel]="searchTerm()" (ngModelChange)="onSearch($any($event))" placeholder="Search employees, orders, projects..." class="search-input" />
         @if (searchTerm()) {
           <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" (click)="clearSearch()" aria-label="Clear search" style="font-size:12px;margin-left:4px;">&times;</button>
@@ -33,16 +33,16 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       <div class="header-actions">
         <!-- Live Clock In/Out Quick Action -->
         <button class="btn btn-sm btn-primary" (click)="quickCheckIn()" *ngIf="!isCheckedIn()">
-          <span>⏱️ Clock In</span>
+          <span><i class="bi bi-box-arrow-in-right me-1"></i>Clock In</span>
         </button>
         <button class="btn btn-sm btn-secondary" (click)="quickCheckOut()" *ngIf="isCheckedIn()">
-          <span>🚪 Clock Out</span>
+          <span><i class="bi bi-box-arrow-right me-1"></i>Clock Out</span>
         </button>
 
         <!-- Notification Bell Dropdown -->
         <div class="notification-wrapper">
           <button class="icon-btn" (click)="toggleNotifications()">
-            <span>🔔</span>
+            <span><i class="bi bi-bell"></i></span>
             <span class="notification-badge" *ngIf="unreadCount() > 0">{{ unreadCount() }}</span>
           </button>
 
@@ -62,7 +62,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
                    (click)="openNotification(n)"
                    style="cursor: pointer;">
                 <div class="item-title">
-                  <span class="me-1">{{ typeIcon(n.type) }}</span>{{ n.title }}
+                  <span class="me-1" [innerHTML]="typeIcon(n.type)"></span>{{ n.title }}
                 </div>
                 <div class="item-msg">{{ n.message }}</div>
                 <div class="item-time">{{ n.timestamp | date:'short' }}</div>
@@ -77,7 +77,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
         <!-- Background Jobs Indicator -->
         <button class="jobs-pill" (click)="refreshJobs()" title="Background jobs status" aria-label="Background jobs status">
           <span class="jobs-dot" *ngIf="activeJobsCount() > 0"></span>
-          <span>⏳</span>
+          <span><i class="bi bi-hdd-stack"></i></span>
           <span class="jobs-count" *ngIf="activeJobsCount() > 0">{{ activeJobsCount() }}</span>
         </button>
 
@@ -86,7 +86,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
 
         <!-- Admin: System Announcement -->
         <button class="btn btn-sm btn-outline-warning" *ngIf="auth.hasRole(['Admin'])" (click)="announce()" title="Send announcement to all users">
-          📢
+          <i class="bi bi-megaphone"></i>
         </button>
 
         <!-- Logout Action -->
@@ -379,11 +379,11 @@ export class HeaderComponent {
 
   typeIcon(type: string): string {
     switch (type) {
-      case 'Success': return '✅';
-      case 'Warning': return '⚠️';
-      case 'Error': return '❌';
-      case 'System': return '📢';
-      default: return '🔔';
+      case 'Success': return '<i class="bi bi-check-circle-fill text-success"></i>';
+      case 'Warning': return '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+      case 'Error': return '<i class="bi bi-x-circle-fill text-danger"></i>';
+      case 'System': return '<i class="bi bi-megaphone-fill text-info"></i>';
+      default: return '<i class="bi bi-bell-fill"></i>';
     }
   }
 

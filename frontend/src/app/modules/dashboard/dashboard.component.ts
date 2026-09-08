@@ -20,7 +20,7 @@ interface WidgetConfig {
       <!-- Welcome Banner -->
       <div class="welcome-banner erp-card">
         <div>
-          <h2>Welcome back, {{ user()?.fullName }} 👋</h2>
+          <h2>Welcome back, {{ user()?.fullName }} <i class="bi bi-hand-thumbs-up"></i></h2>
           <p class="subtitle">Here is what is happening across your enterprise operations today.</p>
         </div>
         <div class="quick-stats-pill">
@@ -28,13 +28,13 @@ interface WidgetConfig {
         </div>
         <div class="widget-toggle-area">
           <button class="btn btn-sm btn-outline-secondary" (click)="toggleWidget('kpiCards')" title="Toggle KPI Cards">
-            {{ isVisible('kpiCards') ? '👁️' : '👁️‍🗨️' }} KPIs
+            <i class="bi" [ngClass]="isVisible('kpiCards') ? 'bi-eye' : 'bi-eye-slash'"></i> KPIs
           </button>
           <button class="btn btn-sm btn-outline-secondary" (click)="toggleWidget('charts')" title="Toggle Charts">
-            {{ isVisible('charts') ? '👁️' : '👁️‍🗨️' }} Charts
+            <i class="bi" [ngClass]="isVisible('charts') ? 'bi-eye' : 'bi-eye-slash'"></i> Charts
           </button>
           <button class="btn btn-sm btn-outline-secondary" (click)="toggleWidget('analytics')" title="Toggle Analytics">
-            {{ isVisible('analytics') ? '👁️' : '👁️‍🗨️' }} Analytics
+            <i class="bi" [ngClass]="isVisible('analytics') ? 'bi-eye' : 'bi-eye-slash'"></i> Analytics
           </button>
         </div>
       </div>
@@ -53,7 +53,7 @@ interface WidgetConfig {
         <div class="metric-card erp-card">
           <div class="metric-header">
             <span class="metric-title">Total Revenue</span>
-            <span class="metric-icon">💰</span>
+            <span class="metric-icon"><i class="bi bi-cash-stack"></i></span>
           </div>
           <div class="metric-value">\${{ (stats()?.totalRevenue || 124500) | number:'1.2-2' }}</div>
           <div class="metric-footer text-emerald-400">
@@ -64,7 +64,7 @@ interface WidgetConfig {
         <div class="metric-card erp-card">
           <div class="metric-header">
             <span class="metric-title">Net Profit</span>
-            <span class="metric-icon">📈</span>
+            <span class="metric-icon"><i class="bi bi-graph-up-arrow"></i></span>
           </div>
           <div class="metric-value">\${{ (stats()?.netProfit || 84200) | number:'1.2-2' }}</div>
           <div class="metric-footer text-emerald-400">
@@ -75,7 +75,7 @@ interface WidgetConfig {
         <div class="metric-card erp-card">
           <div class="metric-header">
             <span class="metric-title">Active Employees</span>
-            <span class="metric-icon">👥</span>
+            <span class="metric-icon"><i class="bi bi-people-fill"></i></span>
           </div>
           <div class="metric-value">{{ stats()?.activeEmployees || 28 }}</div>
           <div class="metric-footer text-blue-400">
@@ -86,7 +86,7 @@ interface WidgetConfig {
         <div class="metric-card erp-card">
           <div class="metric-header">
             <span class="metric-title">Active Projects</span>
-            <span class="metric-icon">🚀</span>
+            <span class="metric-icon"><i class="bi bi-rocket-takeoff"></i></span>
           </div>
           <div class="metric-value">{{ stats()?.activeProjects || 6 }}</div>
           <div class="metric-footer text-indigo-400">
@@ -100,7 +100,7 @@ interface WidgetConfig {
         <div class="metric-card erp-card">
           <div class="metric-header">
             <span class="metric-title">Attendance Today</span>
-            <span class="metric-icon">⏰</span>
+            <span class="metric-icon"><i class="bi bi-clock-history"></i></span>
           </div>
           <div class="metric-value">{{ (stats()?.todayAttendance || 0) > 0 ? 'Present' : 'Not marked' }}</div>
           <div class="metric-footer text-blue-400">
@@ -111,7 +111,7 @@ interface WidgetConfig {
         <div class="metric-card erp-card">
           <div class="metric-header">
             <span class="metric-title">My Pending Leaves</span>
-            <span class="metric-icon">🌴</span>
+            <span class="metric-icon"><i class="bi bi-calendar-x"></i></span>
           </div>
           <div class="metric-value">{{ stats()?.pendingLeaves || 0 }}</div>
           <div class="metric-footer text-indigo-400">
@@ -122,7 +122,7 @@ interface WidgetConfig {
         <div class="metric-card erp-card">
           <div class="metric-header">
             <span class="metric-title">My Tasks</span>
-            <span class="metric-icon">📋</span>
+            <span class="metric-icon"><i class="bi bi-clipboard-check"></i></span>
           </div>
           <div class="metric-value">{{ stats()?.myTasksTotal || 0 }}</div>
           <div class="metric-footer text-emerald-400">
@@ -133,7 +133,7 @@ interface WidgetConfig {
         <div class="metric-card erp-card">
           <div class="metric-header">
             <span class="metric-title">My Documents</span>
-            <span class="metric-icon">📁</span>
+            <span class="metric-icon"><i class="bi bi-folder2-open"></i></span>
           </div>
           <div class="metric-value">—</div>
           <div class="metric-footer text-blue-400">

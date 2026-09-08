@@ -3,6 +3,32 @@
 @import 'bootstrap-icons/font/bootstrap-icons.css';
 @import './styles-light.css';
 
+/* Bootstrap Icons alignment */
+.bi {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -0.125em;
+  line-height: 1;
+}
+
+.nav-icon .bi {
+  font-size: 16px;
+}
+
+.btn .bi {
+  font-size: 14px;
+}
+
+.metric-icon .bi {
+  font-size: 22px;
+}
+
+.brand-header .logo-icon .bi {
+  font-size: 28px;
+  color: var(--accent);
+}
+
 :root {
   /* Dark Enterprise Theme */
   --bg-primary: #0b0f19;

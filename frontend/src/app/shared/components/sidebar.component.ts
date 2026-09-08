@@ -12,7 +12,7 @@ import { UiService } from '../../core/services/ui.service';
     <aside class="sidebar-container">
       <!-- Brand Logo -->
       <div class="brand-header">
-        <div class="logo-icon">🏢</div>
+        <div class="logo-icon"><i class="bi bi-grid-3x3-gap-fill"></i></div>
         <div class="brand-text">
           <span class="brand-title">Enterprise ERP</span>
           <span class="brand-subtitle">Business Suite v1.0</span>
@@ -24,100 +24,100 @@ import { UiService } from '../../core/services/ui.service';
         <div class="nav-label">MAIN</div>
         
         <a routerLink="/dashboard" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">📊</span>
+          <span class="nav-icon"><i class="bi bi-speedometer2"></i></span>
           <span class="nav-text">Dashboard</span>
         </a>
 
         <a routerLink="/profile" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">🙋</span>
+          <span class="nav-icon"><i class="bi bi-person-circle"></i></span>
           <span class="nav-text">My Profile</span>
         </a>
 
         <div class="nav-label">HUMAN RESOURCES</div>
         
         <a routerLink="/employees" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessHR()">
-          <span class="nav-icon">👥</span>
+          <span class="nav-icon"><i class="bi bi-people"></i></span>
           <span class="nav-text">Employees</span>
         </a>
         
         <a routerLink="/attendance" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">⏱️</span>
+          <span class="nav-icon"><i class="bi bi-clock-history"></i></span>
           <span class="nav-text">Attendance</span>
         </a>
 
         <a routerLink="/leaves" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">📅</span>
+          <span class="nav-icon"><i class="bi bi-calendar-event"></i></span>
           <span class="nav-text">Leave Requests</span>
         </a>
 
         <a routerLink="/payroll" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessHR()">
-          <span class="nav-icon">💵</span>
+          <span class="nav-icon"><i class="bi bi-wallet2"></i></span>
           <span class="nav-text">Payroll</span>
         </a>
 
         <div class="nav-label">OPERATIONS &amp; SALES</div>
 
         <a routerLink="/crm" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">🤝</span>
+          <span class="nav-icon"><i class="bi bi-handshake"></i></span>
           <span class="nav-text">CRM &amp; Leads</span>
         </a>
 
         <a routerLink="/projects" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">📋</span>
+          <span class="nav-icon"><i class="bi bi-kanban"></i></span>
           <span class="nav-text">Projects &amp; Tasks</span>
         </a>
 
         <a routerLink="/tasks" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">🔄</span>
+          <span class="nav-icon"><i class="bi bi-arrow-repeat"></i></span>
           <span class="nav-text">Recurring Tasks</span>
         </a>
 
         <a routerLink="/team" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessTeam()">
-          <span class="nav-icon">🧑‍💼</span>
+          <span class="nav-icon"><i class="bi bi-person-workspace"></i></span>
           <span class="nav-text">My Team</span>
         </a>
 
         <a routerLink="/inventory" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">📦</span>
+          <span class="nav-icon"><i class="bi bi-box-seam"></i></span>
           <span class="nav-text">Inventory</span>
         </a>
 
         <a routerLink="/sales" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">🛒</span>
+          <span class="nav-icon"><i class="bi bi-cart3"></i></span>
           <span class="nav-text">Sales &amp; Invoices</span>
         </a>
 
         <a routerLink="/purchase" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessTeam()">
-          <span class="nav-icon">🚚</span>
+          <span class="nav-icon"><i class="bi bi-truck"></i></span>
           <span class="nav-text">Purchase Orders</span>
         </a>
 
         <div class="nav-label">ACCOUNTING</div>
 
         <a routerLink="/finance" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessFinance()">
-          <span class="nav-icon">💰</span>
+          <span class="nav-icon"><i class="bi bi-cash-stack"></i></span>
           <span class="nav-text">Finance &amp; Budget</span>
         </a>
 
         <a routerLink="/users" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessAdmin()">
-          <span class="nav-icon">🛡️</span>
+          <span class="nav-icon"><i class="bi bi-shield-lock"></i></span>
           <span class="nav-text">User Management</span>
         </a>
 
         <a routerLink="/audit-logs" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessAdmin()">
-          <span class="nav-icon">📜</span>
+          <span class="nav-icon"><i class="bi bi-journal-text"></i></span>
           <span class="nav-text">Audit Trail</span>
         </a>
 
         <a routerLink="/documents" routerLinkActive="active" class="nav-item" (click)="onNavClick()">
-          <span class="nav-icon">📁</span>
+          <span class="nav-icon"><i class="bi bi-folder2-open"></i></span>
           <span class="nav-text">Documents</span>
         </a>
 
         <div class="nav-label" *ngIf="canAccessAdmin()">SETTINGS</div>
 
         <a routerLink="/email-templates" routerLinkActive="active" class="nav-item" (click)="onNavClick()" *ngIf="canAccessAdmin()">
-          <span class="nav-icon">📧</span>
+          <span class="nav-icon"><i class="bi bi-envelope-paper"></i></span>
           <span class="nav-text">Email Templates</span>
         </a>
       </nav>

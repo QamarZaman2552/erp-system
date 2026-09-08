@@ -48,7 +48,7 @@ interface EmailTemplate {
             class="template-item"
             [class.active]="selectedId() === tpl.id"
             (click)="selectTemplate(tpl)">
-            <span class="template-icon">{{ getIcon(tpl.id) }}</span>
+            <span class="template-icon" [innerHTML]="getIcon(tpl.id)"></span>
             <div class="template-info">
               <span class="template-name">{{ tpl.name }}</span>
               <span class="template-desc">{{ tpl.description }}</span>
@@ -61,15 +61,13 @@ interface EmailTemplate {
       <div class="preview-panel erp-card" *ngIf="selected()">
         <div class="preview-header">
           <div>
-            <h3 class="preview-title">{{ getIcon(selected()!.id) }} {{ selected()!.name }}</h3>
+            <h3 class="preview-title"><span [innerHTML]="getIcon(selected()!.id)"></span> {{ selected()!.name }}</h3>
             <p class="preview-subject">Subject: {{ selected()!.subject }}</p>
           </div>
           <div class="preview-actions">
-            <button class="btn btn-sm btn-secondary" (click)="showRaw.set(!showRaw())">
-              {{ showRaw() ? '👁 Preview' : '🔍 Raw HTML' }}
+            <button class="btn btn-sm btn-secondary" (click)="showRaw.set(!showRaw())" [innerHTML]="rawToggleLabel()">
             </button>
-            <button class="btn btn-sm btn-secondary" (click)="copyHtml()">
-              {{ copied() ? '✓ Copied!' : '📋 Copy HTML' }}
+            <button class="btn btn-sm btn-secondary" (click)="copyHtml()" [innerHTML]="copyLabel()">
             </button>
           </div>
         </div>
@@ -359,20 +357,32 @@ export class EmailTemplatePreviewComponent implements OnInit {
 
   getIcon(id: string): string {
     const icons: Record<string, string> = {
-      'password-reset': '🔑',
-      'leave-approved': '✅',
-      'leave-rejected': '❌',
-      'payslip': '💰',
-      'sales-invoice': '📄',
-      'overdue-reminder': '⚠️',
-      'po-to-supplier': '📦'
+      'password-reset': '<i class="bi bi-key-fill"></i>',
+      'leave-approved': '<i class="bi bi-check-circle-fill"></i>',
+      'leave-rejected': '<i class="bi bi-x-circle-fill"></i>',
+      'payslip': '<i class="bi bi-wallet2"></i>',
+      'sales-invoice': '<i class="bi bi-file-earmark-text"></i>',
+      'overdue-reminder': '<i class="bi bi-exclamation-triangle-fill"></i>',
+      'po-to-supplier': '<i class="bi bi-box-seam"></i>'
     };
-    return icons[id] || '📧';
+    return icons[id] || '<i class="bi bi-envelope"></i>';
   }
 
   copyHtml(): void {
     navigator.clipboard.writeText(this.renderedHtml());
     this.copied.set(true);
     setTimeout(() => this.copied.set(false), 2000);
+  }
+
+  rawToggleLabel(): string {
+    return this.showRaw()
+      ? '<i class="bi bi-eye me-1"></i> Preview'
+      : '<i class="bi bi-code-slash me-1"></i> Raw HTML';
+  }
+
+  copyLabel(): string {
+    return this.copied()
+      ? '<i class="bi bi-check-lg me-1"></i> Copied!'
+      : '<i class="bi bi-clipboard me-1"></i> Copy HTML';
   }
 }

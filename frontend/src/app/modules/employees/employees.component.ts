@@ -39,7 +39,7 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
         <option [ngValue]="3">On Leave</option>
       </select>
       <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()" *ngIf="filterDeptId || filterStatus !== null">Clear</button>
-      <button class="btn btn-sm btn-outline-primary ms-2" (click)="downloadCsv()" title="Export employees as CSV">📥 Export CSV</button>
+      <button class="btn btn-sm btn-outline-primary ms-2" (click)="downloadCsv()" title="Export employees as CSV"><i class="bi bi-download"></i> Export CSV</button>
       <div class="stats-counter ms-auto">
         Total Staff: <strong>{{ totalCount() }}</strong>
       </div>
