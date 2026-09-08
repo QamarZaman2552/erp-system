@@ -3,6 +3,7 @@ using ERP.Application.DTOs.Business;
 using ERP.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Collections.Concurrent;
 
 namespace ERP.API.Controllers;
 
@@ -240,5 +241,113 @@ public class TasksController(
         var res = await taskService.DeleteAsync(id);
         if (!res.Success) return BadRequest(res);
         return Ok(res);
+    }
+}
+
+[ApiController]
+[Route("api/tasks/recurring")]
+[Authorize]
+public class RecurringTasksController : ControllerBase
+{
+    private static readonly ConcurrentDictionary<string, object> _store = new();
+    private static int _counter = 0;
+
+    [HttpGet]
+    public IActionResult GetAll()
+    {
+        var tasks = _store.Values.Cast<dynamic>().ToList();
+        return Ok(tasks);
+    }
+
+    [HttpPost]
+    public IActionResult Create([FromBody] dynamic dto)
+    {
+        var id = Guid.NewGuid().ToString();
+        var task = new
+        {
+            id,
+            title = (string)dto.title,
+            description = (string)(dto.description ?? ""),
+            frequency = (string)dto.frequency,
+            startDate = (string)dto.startDate,
+            endDate = (string)(dto.endDate ?? ""),
+            isActive = true,
+            status = "Active",
+            category = (string)(dto.category ?? ""),
+            assignedTo = (string)(dto.assignedTo ?? ""),
+            createdBy = (string)(dto.createdBy ?? ""),
+            lastExecutedAt = (string)"",
+            nextExecutionDate = (string)dto.startDate,
+            createdAt = DateTime.UtcNow.ToString("yyyy-MM-dd"),
+            completedCount = 0
+        };
+        _store.TryAdd(id, task);
+        return Ok(new { success = true, data = task, message = "Recurring task created." });
+    }
+
+    [HttpPut("{id}")]
+    public IActionResult Update(string id, [FromBody] dynamic dto)
+    {
+        if (!_store.TryGetValue(id, out var existing))
+            return NotFound(new { success = false, message = "Task not found." });
+
+        var task = new
+        {
+            id,
+            title = (string)dto.title,
+            description = (string)(dto.description ?? ""),
+            frequency = (string)dto.frequency,
+            startDate = (string)dto.startDate,
+            endDate = (string)(dto.endDate ?? ""),
+            isActive = (bool)(dto.isActive ?? true),
+            status = (string)(dto.status ?? "Active"),
+            category = (string)(dto.category ?? ""),
+            assignedTo = (string)(dto.assignedTo ?? ""),
+            createdBy = (string)(dto.createdBy ?? ""),
+            lastExecutedAt = (string)(dto.lastExecutedAt ?? ""),
+            nextExecutionDate = (string)(dto.nextExecutionDate ?? ""),
+            createdAt = (string)(dto.createdAt ?? DateTime.UtcNow.ToString("yyyy-MM-dd")),
+            completedCount = (int)(dto.completedCount ?? 0)
+        };
+        _store[id] = task;
+        return Ok(new { success = true, data = task, message = "Task updated." });
+    }
+
+    [HttpDelete("{id}")]
+    public IActionResult Delete(string id)
+    {
+        if (!_store.TryRemove(id, out _))
+            return NotFound(new { success = false, message = "Task not found." });
+        return Ok(new { success = true, message = "Task deleted." });
+    }
+
+    [HttpPost("{id}/toggle")]
+    public IActionResult Toggle(string id)
+    {
+        if (!_store.TryGetValue(id, out var existing))
+            return NotFound(new { success = false, message = "Task not found." });
+
+        var t = (dynamic)existing;
+        string newStatus = t.status == "Paused" ? "Active" : "Paused";
+        var updated = new
+        {
+            id = t.id,
+            title = t.title,
+            description = t.description,
+            frequency = t.frequency,
+            startDate = t.startDate,
+            endDate = t.endDate,
+            isActive = t.isActive,
+            status = newStatus,
+            category = t.category,
+            assignedTo = t.assignedTo,
+            createdBy = t.createdBy,
+            lastExecutedAt = t.lastExecutedAt,
+            nextExecutionDate = t.nextExecutionDate,
+            createdAt = t.createdAt,
+            completedCount = t.completedCount
+        };
+        _store[id] = updated;
+        return Ok(new { success = true, data = updated, message = $"Task {newStatus.ToLower()}." });
     }
 }

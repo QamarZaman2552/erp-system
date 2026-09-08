@@ -676,7 +676,7 @@ public class DocumentsController(
 }
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/email-templates")]
 [Authorize]
 public class EmailTemplatesController : ControllerBase
 {
