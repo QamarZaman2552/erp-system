@@ -224,7 +224,7 @@ interface WidgetConfig {
       } @else {
       <div *ngIf="canSeeAnalytics()" class="analytics-section">
         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-          <h3 style="font-size:18px;margin:0"><i class="bi bi-graph-up-arrow me-2"></i>Reports &amp; Analytics</h3>
+          <h3 class="section-title"><i class="bi bi-graph-up-arrow me-2"></i>Reports &amp; Analytics</h3>
           <div class="d-flex align-items-center gap-2">
             <button class="btn btn-sm btn-outline-secondary" [class.active]="period() === '6M'" (click)="setPeriod('6M')">6M</button>
             <button class="btn btn-sm btn-outline-secondary" [class.active]="period() === '1Y'" (click)="setPeriod('1Y')">1Y</button>
@@ -244,7 +244,7 @@ interface WidgetConfig {
                   <span class="mini-bar-value">{{ t.presentRate }}%</span>
                 </div>
               </div>
-              <p class="text-secondary small mb-0" *ngIf="attendanceTrends().length === 0">No attendance data yet</p>
+              <div class="empty-state" *ngIf="attendanceTrends().length === 0"><i class="bi bi-calendar-week"></i><p>No attendance data yet</p></div>
             </div>
           </div>
 
@@ -259,7 +259,7 @@ interface WidgetConfig {
                   <span class="mini-bar-value">{{ d.employeeCount }}</span>
                 </div>
               </div>
-              <p class="text-secondary small mb-0" *ngIf="deptDist().length === 0">No data</p>
+              <div class="empty-state" *ngIf="deptDist().length === 0"><i class="bi bi-building"></i><p>No data</p></div>
             </div>
           </div>
 
@@ -276,7 +276,7 @@ interface WidgetConfig {
                   <span class="mini-bar-value">{{ s.count }}</span>
                 </div>
               </div>
-              <p class="text-secondary small mb-0" *ngIf="leadFunnel().length === 0">No leads yet</p>
+              <div class="empty-state" *ngIf="leadFunnel().length === 0"><i class="bi bi-filter-square"></i><p>No leads yet</p></div>
             </div>
           </div>
 
@@ -289,11 +289,11 @@ interface WidgetConfig {
                   <span>{{ p.projectName }}</span>
                   <span class="text-secondary">{{ p.status }} · {{ p.progress }}%</span>
                 </div>
-                <div class="progress mb-2" style="height:6px;">
+                <div class="progress mb-2 progress-thin">
                   <div class="progress-bar" [ngClass]="p.progress >= 75 ? 'bg-success' : p.progress >= 40 ? 'bg-warning' : 'bg-primary'" [style.width.%]="p.progress"></div>
                 </div>
               </div>
-              <p class="text-secondary small mb-0" *ngIf="projects().length === 0">No projects</p>
+              <div class="empty-state" *ngIf="projects().length === 0"><i class="bi bi-kanban"></i><p>No projects</p></div>
             </div>
           </div>
 
@@ -312,7 +312,7 @@ interface WidgetConfig {
                   </tr>
                 </tbody>
               </table>
-              <p class="text-secondary small mb-0" *ngIf="topEmployees().length === 0">No task data</p>
+              <div class="empty-state" *ngIf="topEmployees().length === 0"><i class="bi bi-trophy"></i><p>No task data</p></div>
             </div>
           </div>
 
@@ -330,7 +330,7 @@ interface WidgetConfig {
                   </tr>
                 </tbody>
               </table>
-              <p class="text-secondary small mb-0" *ngIf="inventoryVal().length === 0">No inventory</p>
+              <div class="empty-state" *ngIf="inventoryVal().length === 0"><i class="bi bi-box-seam"></i><p>No inventory</p></div>
             </div>
           </div>
 
@@ -346,7 +346,7 @@ interface WidgetConfig {
                   <span class="bar-month">{{ p.month }}</span>
                 </div>
               </div>
-              <p class="text-secondary small mb-0" *ngIf="payrollCosts().length === 0">No payroll processed</p>
+              <div class="empty-state" *ngIf="payrollCosts().length === 0"><i class="bi bi-cash-stack"></i><p>No payroll processed</p></div>
             </div>
           </div>
 
@@ -361,7 +361,7 @@ interface WidgetConfig {
                   <span class="mini-bar-value">{{ l.approvedLeaveDays }}</span>
                 </div>
               </div>
-              <p class="text-secondary small mb-0" *ngIf="leaveUtil().length === 0">No approved leaves</p>
+              <div class="empty-state" *ngIf="leaveUtil().length === 0"><i class="bi bi-airplane"></i><p>No approved leaves</p></div>
             </div>
           </div>
 
@@ -376,7 +376,7 @@ interface WidgetConfig {
                   <span class="mini-bar-value">+{{ c.newCustomers }}</span>
                 </div>
               </div>
-              <p class="text-secondary small mb-0" *ngIf="custAcq().length === 0">No new customers this year</p>
+              <div class="empty-state" *ngIf="custAcq().length === 0"><i class="bi bi-person-plus"></i><p>No new customers this year</p></div>
             </div>
           </div>
         </div>
@@ -388,19 +388,18 @@ interface WidgetConfig {
     .dashboard-page {
       display: flex;
       flex-direction: column;
-      gap: 24px;
+      gap: var(--space-6);
     }
 
     .welcome-banner {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: linear-gradient(135deg, rgba(192, 192, 192, 0.15) 0%, rgba(166, 166, 166, 0.1) 100%), var(--bg-glass-card);
     }
 
     .widget-toggle-area {
       display: flex;
-      gap: 8px;
+      gap: var(--space-2);
       flex-wrap: wrap;
     }
 
@@ -422,8 +421,8 @@ interface WidgetConfig {
     .quick-stats-pill {
       display: flex;
       align-items: center;
-      gap: 8px;
-      padding: 8px 16px;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-4);
       background: var(--bg-tertiary);
       border-radius: 9999px;
       font-size: 12px;
@@ -441,13 +440,13 @@ interface WidgetConfig {
     .metrics-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
+      gap: var(--space-5);
     }
 
     .metric-card {
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: var(--space-3);
     }
 
     .metric-header {
@@ -477,14 +476,14 @@ interface WidgetConfig {
       font-size: 12px;
     }
 
-    .text-emerald-400 { color: #34d399; }
-    .text-blue-400 { color: #60a5fa; }
-    .text-indigo-400 { color: #ededed; }
+    .text-emerald-400 { color: var(--success); }
+    .text-blue-400 { color: var(--info); }
+    .text-indigo-400 { color: var(--text-primary); }
 
     .analytics-row {
       display: grid;
       grid-template-columns: 2fr 1fr;
-      gap: 24px;
+      gap: var(--space-6);
     }
 
     @media (max-width: 1024px) {
@@ -497,7 +496,7 @@ interface WidgetConfig {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 24px;
+      margin-bottom: var(--space-6);
     }
 
     .bars-container {
@@ -505,8 +504,8 @@ interface WidgetConfig {
       align-items: flex-end;
       justify-content: space-between;
       height: 200px;
-      padding: 10px 0;
-      gap: 8px;
+      padding: var(--space-3) 0;
+      gap: var(--space-2);
       border-bottom: 1px solid var(--border-color);
     }
 
@@ -518,12 +517,17 @@ interface WidgetConfig {
       flex: 1;
       height: 100%;
       justify-content: flex-end;
+      transition: opacity 0.2s ease;
+    }
+
+    .bar-col:hover {
+      opacity: 0.85;
     }
 
     .bar-visual-group {
       display: flex;
       align-items: flex-end;
-      gap: 4px;
+      gap: var(--space-1);
       height: 160px;
       width: 100%;
       justify-content: center;
@@ -540,7 +544,7 @@ interface WidgetConfig {
     }
 
     .bar-expense {
-      background: rgba(239, 68, 68, 0.7);
+      background: var(--danger);
     }
 
     .bar-month {
@@ -550,15 +554,15 @@ interface WidgetConfig {
 
     .chart-legend {
       display: flex;
-      gap: 20px;
-      margin-top: 16px;
+      gap: var(--space-5);
+      margin-top: var(--space-4);
       justify-content: center;
     }
 
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: var(--space-2);
       font-size: 12px;
       color: var(--text-secondary);
     }
@@ -575,7 +579,7 @@ interface WidgetConfig {
     .activities-list {
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: var(--space-4);
     }
 
     .activity-item {
@@ -583,7 +587,12 @@ interface WidgetConfig {
       align-items: center;
       gap: 12px;
       padding: 10px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      border-bottom: 1px solid var(--border-color);
+      transition: background 0.2s ease;
+    }
+
+    .activity-item:hover {
+      background: var(--bg-tertiary);
     }
 
     .activity-dot {
@@ -612,20 +621,20 @@ interface WidgetConfig {
     .analytics-section {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: var(--space-3);
     }
 
     .mini-bars {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: var(--space-2);
     }
 
     .mini-bar-row {
       display: grid;
       grid-template-columns: 70px 1fr 48px;
       align-items: center;
-      gap: 8px;
+      gap: var(--space-2);
       font-size: 12px;
     }
 
@@ -656,11 +665,41 @@ interface WidgetConfig {
     }
 
     .funnel-fill {
-      background: linear-gradient(90deg, #f59e0b, #ef4444);
+      background: linear-gradient(90deg, var(--warning), var(--danger));
     }
 
     .bars-container.compact {
       height: 120px;
+    }
+
+    .section-title {
+      font-size: 18px;
+      margin: 0;
+    }
+
+    .progress-thin {
+      height: 6px;
+    }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-6) var(--space-4);
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .empty-state i {
+      font-size: 24px;
+      margin-bottom: var(--space-2);
+      opacity: 0.5;
+    }
+
+    .empty-state p {
+      margin: 0;
+      font-size: 13px;
     }
   `]
 })

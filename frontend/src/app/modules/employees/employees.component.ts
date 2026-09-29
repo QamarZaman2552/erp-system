@@ -27,11 +27,11 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
       <div class="search-field">
         <input type="text" [ngModel]="searchTerm()" (ngModelChange)="searchService.setSearch($event)" placeholder="Search by name, email, code..." class="form-control" />
       </div>
-      <select [(ngModel)]="filterDeptId" (change)="loadEmployees()" class="form-select form-select-sm" style="max-width: 180px;">
+      <select [(ngModel)]="filterDeptId" (change)="loadEmployees()" class="form-select form-select-sm">
         <option [ngValue]="null">All Departments</option>
         <option *ngFor="let d of departments()" [ngValue]="d.id">{{ d.name }}</option>
       </select>
-      <select [(ngModel)]="filterStatus" (change)="loadEmployees()" class="form-select form-select-sm" style="max-width: 150px;">
+      <select [(ngModel)]="filterStatus" (change)="loadEmployees()" class="form-select form-select-sm">
         <option [ngValue]="null">All Statuses</option>
         <option [ngValue]="0">Active</option>
         <option [ngValue]="1">Inactive</option>
@@ -104,7 +104,7 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
                 <button class="btn btn-sm btn-secondary" (click)="openEdit(emp)" title="Edit">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-danger" (click)="deleteEmployee(emp.id)">Delete</button>
+                <button class="btn btn-sm btn-danger" (click)="deleteEmployee(emp.id)" title="Delete">Delete</button>
               </div>
             </td>
           </tr>
@@ -112,7 +112,7 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
           <tr *ngIf="sortedEmployees().length === 0">
             <td colspan="8" class="text-center py-8">
               <div class="empty-state-card">
-                <div class="empty-state-icon">📭</div>
+                <div class="empty-state-icon"><i class="bi bi-inbox"></i></div>
                 <div class="font-semibold">No employees found</div>
                 <div class="text-sm text-gray-400">Adjust your search or filters to see more results.</div>
               </div>
@@ -122,6 +122,7 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
       </table>
     </div>
     <app-pagination
+      style="margin-top: 12px;"
       [page]="page()"
       [pageSize]="pageSize()"
       [totalCount]="totalCount()"
@@ -213,8 +214,8 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
                      <input type="text" *ngIf="newEmp.createLogin" [(ngModel)]="newEmp.newPassword" (ngModelChange)="onPasswordInput($event)" name="npwd"
                             class="form-control form-control-sm mt-1" placeholder="Login password (min 6 chars)" />
                      <div class="password-strength mt-1" *ngIf="newEmp.newPassword">
-                       <div class="strength-bar" *ngFor="let s of [1,2,3,4,5]" [class.active]="passwordStrength() >= s" [style.background-color]="passwordStrength() >= s ? strengthColor(s) : 'var(--bg-tertiary)'"></div>
-                       <small class="form-hint" [style.color]="strengthColor(passwordStrength())">{{ strengthLabel() }}</small>
+                      <div class="strength-bar" *ngFor="let s of [1,2,3,4,5]" [class.active]="passwordStrength() >= s" [class.strength-1]="passwordStrength() === 1" [class.strength-2]="passwordStrength() === 2" [class.strength-3]="passwordStrength() === 3" [class.strength-4]="passwordStrength() === 4" [class.strength-5]="passwordStrength() === 5"></div>
+                      <small class="form-hint strength-label">{{ strengthLabel() }}</small>
                      </div>
                      <small class="form-hint">Creates a system user (Employee role) with this password.</small>
                    </div>
@@ -277,7 +278,7 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
     .text-sm { font-size: 13px; }
     .text-xs { font-size: 11px; }
     .text-gray-400 { color: var(--text-secondary); }
-    .text-indigo-400 { color: #ededed; }
+    .text-indigo-400 { color: var(--text-primary); }
     .text-center { text-align: center; }
     .py-8 { padding-top: 32px; padding-bottom: 32px; }
 
@@ -305,6 +306,14 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
       background: var(--bg-tertiary);
       transition: background 0.2s;
     }
+
+    .strength-bar.active.strength-1 { background: var(--danger); }
+    .strength-bar.active.strength-2 { background: var(--danger); }
+    .strength-bar.active.strength-3 { background: var(--warning); }
+    .strength-bar.active.strength-4 { background: var(--success); }
+    .strength-bar.active.strength-5 { background: var(--success); }
+    .strength-label { color: var(--text-muted); }
+    .empty-state-icon .bi { font-size: 40px; color: var(--text-muted); }
 
     @media (max-width: 767.98px) {
       .page-header-row {
@@ -653,7 +662,7 @@ export class EmployeesComponent implements OnInit {
   }
 
   strengthColor(lvl: number): string {
-    const c = ['', '#e74c3c', '#e74c3c', '#f39c12', '#2ecc71', '#2ecc71'];
+    const c = ['', 'var(--danger)', 'var(--danger)', 'var(--warning)', 'var(--success)', 'var(--success)'];
     return c[lvl] || 'transparent';
   }
 }

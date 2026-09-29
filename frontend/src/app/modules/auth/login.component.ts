@@ -24,7 +24,7 @@ import { ApiService } from '../../core/services/api.service';
           <span><i class="bi bi-exclamation-triangle-fill"></i></span> {{ errorMessage() }}
         </div>
 
-        <div class="alert-box alert-success" *ngIf="resetSent()" style="border-color: rgba(25,135,84,.4); background: rgba(25,135,84,.1); color: #75dfae;">
+        <div class="alert-box alert-success" *ngIf="resetSent()">
           <span><i class="bi bi-envelope-check-fill"></i></span> {{ resetSent() }}
         </div>
 
@@ -37,7 +37,7 @@ import { ApiService } from '../../core/services/api.service';
           </div>
           <button type="submit" class="btn btn-primary w-full" [disabled]="isSendingReset()">
             <span *ngIf="!isSendingReset()">Send Reset Link</span>
-            <span *ngIf="isSendingReset()">Sending...</span>
+            <span *ngIf="isSendingReset()"><span class="spinner-border spinner-border-sm me-2"></span>Sending...</span>
           </button>
         </form>
 
@@ -63,21 +63,21 @@ import { ApiService } from '../../core/services/api.service';
               name="password"
               required
               class="form-control"
-              placeholder="••••••••"
+              placeholder="Enter your password"
             />
           </div>
 
           <button type="submit" class="btn btn-primary w-full" [disabled]="isLoading()">
             <span *ngIf="!isLoading()">Sign In to Dashboard →</span>
-            <span *ngIf="isLoading()">Authenticating...</span>
+            <span *ngIf="isLoading()"><span class="spinner-border spinner-border-sm me-2"></span>Authenticating...</span>
           </button>
         </form>
 
         <div class="text-center mt-2" *ngIf="!showForgot()">
-          <a href="javascript:void(0)" class="small text-secondary" (click)="openForgot()">Forgot password?</a>
+          <a href="javascript:void(0)" class="small text-secondary link-hover" (click)="openForgot()">Forgot password?</a>
         </div>
         <div class="text-center mt-2" *ngIf="showForgot()">
-          <a href="javascript:void(0)" class="small text-secondary" (click)="closeForgot()">← Back to login</a>
+          <a href="javascript:void(0)" class="small text-secondary link-hover" (click)="closeForgot()">← Back to login</a>
         </div>
 
         <!-- Quick Demo Credentials Selector -->
@@ -101,8 +101,8 @@ import { ApiService } from '../../core/services/api.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: radial-gradient(circle at 50% 10%, rgba(192, 192, 192, 0.15), transparent 50%),
-                  radial-gradient(circle at 80% 80%, rgba(166, 166, 166, 0.15), transparent 50%),
+      background: radial-gradient(circle at 50% 10%, var(--accent-bg), transparent 50%),
+                  radial-gradient(circle at 80% 80%, var(--accent-bg), transparent 50%),
                   var(--bg-primary);
       padding: 20px;
     }
@@ -128,7 +128,7 @@ import { ApiService } from '../../core/services/api.service';
       width: 64px;
       height: 64px;
       margin: 0 auto 16px;
-      background: rgba(192, 192, 192, 0.1);
+      background: var(--accent-bg);
       border: 1px solid var(--border-glow);
       border-radius: var(--radius-lg);
       display: flex;
@@ -159,7 +159,13 @@ import { ApiService } from '../../core/services/api.service';
     .alert-error {
       background: var(--danger-bg);
       border: 1px solid rgba(239, 68, 68, 0.3);
-      color: #fca5a5;
+      color: var(--danger);
+    }
+
+    .alert-success {
+      border-color: rgba(25, 135, 84, .4);
+      background: rgba(25, 135, 84, .1);
+      color: #75dfae;
     }
 
     .w-full {
@@ -200,9 +206,14 @@ import { ApiService } from '../../core/services/api.service';
     }
 
     .demo-btn:hover {
-      background: rgba(192, 192, 192, 0.2);
+      background: var(--accent-bg);
       border-color: var(--accent-primary);
-      color: #fff;
+      color: var(--text-primary);
+    }
+
+    .link-hover:hover {
+      color: var(--accent);
+      text-decoration: underline;
     }
   `]
 })

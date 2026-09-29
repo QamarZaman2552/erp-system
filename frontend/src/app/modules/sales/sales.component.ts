@@ -29,7 +29,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
     <div *ngIf="flash()" class="alert alert-success py-2 small">{{ flash() }}</div>
 
     <!-- Sales Order Table -->
-    <div class="card border-0 shadow-sm mb-4">
+    <div class="erp-card mb-4">
       <div class="table-responsive">
         <table class="table table-dark table-hover align-middle mb-0">
           <thead>
@@ -46,6 +46,18 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="loading()">
+              <td colspan="9" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <span class="ms-2 text-sm text-secondary">Loading orders...</span>
+              </td>
+            </tr>
+            <tr *ngIf="!loading() && orders().length === 0">
+              <td colspan="9" class="text-center py-5 text-secondary">
+                <i class="bi bi-cart-x fs-3 d-block mb-2"></i>
+                No sales orders yet. Click "New Sales Order" to create one.
+              </td>
+            </tr>
             <tr *ngFor="let order of orders()">
               <td><span class="font-monospace text-primary fw-bold">{{ order.orderNumber }}</span></td>
               <td class="fw-semibold">{{ order.customerName }}</td>
@@ -54,7 +66,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
               <td class="fw-bold text-success">\${{ order.totalAmount | number:'1.2-2' }}</td>
               <td>\${{ order.paidAmount | number:'1.2-2' }}</td>
               <td><span class="badge" [ngClass]="paymentBadge(order.paymentStatus)">{{ order.paymentStatus }}</span></td>
-              <td><span class="badge bg-secondary">{{ order.status }}</span></td>
+              <td><span class="badge badge-neutral">{{ order.status }}</span></td>
               <td class="text-end">
                 <div class="btn-group btn-group-sm">
                   <button *ngIf="order.status === 'Pending' || order.status === 'Draft'" class="btn btn-outline-success" (click)="confirm(order)" title="Confirm & deduct stock">
@@ -65,7 +77,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
                     class="btn btn-outline-info" (click)="openPayment(order)" title="Record payment">
                     <i class="bi bi-cash-coin"></i>
                   </button>
-                  <a class="btn btn-outline-light" [href]="api.invoicePdfUrl(order.id)" target="_blank" title="Download invoice PDF">
+                  <a class="btn btn-outline-secondary" [href]="api.invoicePdfUrl(order.id)" target="_blank" title="Download invoice PDF">
                     <i class="bi bi-file-earmark-pdf"></i>
                   </a>
                   <button class="btn btn-outline-secondary" (click)="emailInvoice(order)" title="Email invoice to customer">
@@ -78,7 +90,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
                   </button>
                   <button
                     *ngIf="order.status === 'Pending' || order.status === 'Confirmed'"
-                    class="btn btn-outline-dark" (click)="cancel(order)" title="Cancel order">
+                    class="btn btn-outline-secondary" (click)="cancel(order)" title="Cancel order">
                     <i class="bi bi-x-circle"></i>
                   </button>
                   <button class="btn btn-outline-primary" (click)="viewPayments(order)" title="Payment history">
@@ -87,23 +99,17 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
                 </div>
               </td>
             </tr>
-
-            <tr *ngIf="orders().length === 0">
-              <td colspan="9" class="text-center py-5 text-secondary">
-                No sales orders yet. Click "New Sales Order" to create one.
-              </td>
-            </tr>
           </tbody>
         </table>
       </div>
     </div>
 
-    <app-pagination [page]="page()" [pageSize]="pageSize()" [totalCount]="totalCount()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
+    <app-pagination style="margin-top: 12px;" [page]="page()" [pageSize]="pageSize()" [totalCount]="totalCount()" (pageChange)="onPageChange($event)" (pageSizeChange)="onPageSizeChange($event)"></app-pagination>
 
     <!-- Reports -->
     <div class="row g-4 mb-4">
       <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
+        <div class="erp-card h-100">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h6 class="mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>Monthly Sales {{ reportYear }}</h6>
@@ -125,7 +131,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
       </div>
 
       <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
+        <div class="erp-card h-100">
           <div class="card-body">
             <h6 class="mb-3"><i class="bi bi-people me-2 text-primary"></i>Customer-wise Sales</h6>
             <table class="table table-sm table-dark mb-0">
@@ -144,7 +150,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
       </div>
 
       <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
+        <div class="erp-card h-100">
           <div class="card-body">
             <h6 class="mb-3"><i class="bi bi-box-seam me-2 text-primary"></i>Top Products</h6>
             <table class="table table-sm table-dark mb-0">
@@ -299,6 +305,7 @@ export class SalesComponent implements OnInit {
   monthlyReport = signal<any[]>([]);
   customerReport = signal<any[]>([]);
   productReport = signal<any[]>([]);
+  loading = signal(false);
 
   showModal = signal(false);
   payOrder = signal<SalesOrder | null>(null);
@@ -334,8 +341,10 @@ export class SalesComponent implements OnInit {
   }
 
   loadOrders(): void {
+    this.loading.set(true);
     this.api.getSalesOrders(this.page(), this.pageSize()).subscribe({
-      next: (res) => { if (res?.items) { this.orders.set(res.items); this.totalCount.set(res.totalCount); } }
+      next: (res) => { if (res?.items) { this.orders.set(res.items); this.totalCount.set(res.totalCount); } },
+      complete: () => this.loading.set(false)
     });
   }
 
@@ -475,11 +484,11 @@ export class SalesComponent implements OnInit {
 
   paymentBadge(status: string): string {
     switch (status) {
-      case 'Paid': return 'bg-success';
-      case 'Partial': return 'bg-warning';
-      case 'Overdue': return 'bg-danger';
-      case 'Refunded': return 'bg-info';
-      default: return 'bg-secondary';
+      case 'Paid': return 'badge badge-success';
+      case 'Partial': return 'badge badge-warning';
+      case 'Overdue': return 'badge badge-danger';
+      case 'Refunded': return 'badge badge-info';
+      default: return 'badge badge-neutral';
     }
   }
 }

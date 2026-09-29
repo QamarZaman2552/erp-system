@@ -128,7 +128,7 @@ import { UiService } from '../../core/services/ui.service';
       <div class="sidebar-user" *ngIf="user()">
         <div class="user-avatar">{{ user()?.fullName?.charAt(0) || 'U' }}</div>
         <div class="user-info">
-          <div class="user-name">{{ user()?.fullName }}</div>
+          <div class="user-name" [title]="user()?.fullName">{{ user()?.fullName }}</div>
           <div class="user-role badge badge-info">{{ user()?.role }}</div>
         </div>
       </div>
@@ -160,7 +160,7 @@ import { UiService } from '../../core/services/ui.service';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(192, 192, 192, 0.1);
+      background: var(--accent-bg);
       width: 44px;
       height: 44px;
       border-radius: var(--radius-md);
@@ -213,13 +213,13 @@ import { UiService } from '../../core/services/ui.service';
     }
 
     .nav-item:hover {
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--bg-hover);
       color: var(--text-primary);
     }
 
     .nav-item.active {
       background: var(--accent-gradient);
-      color: #10141f;
+      color: #14171f;
       font-weight: 700;
       box-shadow: var(--accent-glow);
     }
@@ -244,7 +244,7 @@ import { UiService } from '../../core/services/ui.service';
       height: 36px;
       border-radius: 50%;
       background: var(--accent-gradient);
-      color: #10141f;
+      color: #14171f;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -273,6 +273,7 @@ import { UiService } from '../../core/services/ui.service';
 
     .sidebar-overlay {
       display: none;
+      cursor: pointer;
     }
 
     @media (max-width: 991.98px) {
@@ -283,7 +284,7 @@ import { UiService } from '../../core/services/ui.service';
         z-index: 1050;
         transform: translateX(-100%);
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+        box-shadow: var(--shadow-xl);
       }
 
       .sidebar-container.open {

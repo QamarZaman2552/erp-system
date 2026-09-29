@@ -43,6 +43,17 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
     </div>
 
     <!-- Leave Requests Table -->
+    @if (loading()) {
+    <div class="erp-table-container">
+      @for (i of [1,2,3,4,5]; track i) {
+        <div class="skeleton-row">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line medium"></div>
+          <div class="skeleton-line short"></div>
+        </div>
+      }
+    </div>
+    } @else {
     <div class="erp-table-container">
       <table class="erp-table">
         <thead>
@@ -81,23 +92,23 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
                 <span *ngIf="leave.rejectionReason" class="text-xs text-danger">✕ {{ leave.rejectionReason }}</span>
               </div>
               <div class="action-btn-group mt-1" *ngIf="leave.status === 'Pending' && canApprove()">
-                <button class="btn btn-sm btn-success" (click)="approve(leave.id, true)">✓</button>
-                <button class="btn btn-sm btn-danger" (click)="approve(leave.id, false)">✕</button>
+                <button class="btn btn-sm btn-success" (click)="approve(leave.id, true)"><i class="bi bi-check-lg"></i> Approve</button>
+                <button class="btn btn-sm btn-danger" (click)="approve(leave.id, false)"><i class="bi bi-x-lg"></i> Reject</button>
               </div>
               <span class="text-xs text-gray-500" *ngIf="leave.status !== 'Pending'">Processed</span>
             </td>
           </tr>
 
           <tr *ngIf="leaves().length === 0">
-            <td colspan="6" class="text-center py-8 text-gray-400">
-              No leave requests currently found.
-            </td>
+            <td colspan="6" class="text-center py-8"><div class="empty-state"><i class="bi bi-calendar-x"></i><p>No leave requests found</p></div></td>
           </tr>
         </tbody>
       </table>
     </div>
+    }
 
     <app-pagination
+      style="margin-top: 12px;"
       [page]="page()"
       [pageSize]="pageSize()"
       [totalCount]="totalCount()"
@@ -111,7 +122,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
         <div class="erp-card p-3 h-100">
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="h6 mb-0">🗓️ Who's On Leave</h5>
-            <input type="month" [(ngModel)]="calendarMonth" (change)="calendarMonth.set($any($event.target).value)" class="form-control form-control-sm" style="max-width: 160px;" />
+            <input type="month" [(ngModel)]="calendarMonth" (change)="calendarMonth.set($any($event.target).value)" class="form-control form-control-sm" />
           </div>
           <table class="erp-table" *ngIf="onLeaveThisMonth().length > 0; else noneOnLeave">
             <thead>
@@ -255,7 +266,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
 
     .text-sm { font-size: 13px; }
     .text-xs { font-size: 11px; }
-    .text-gray-300 { color: #d1d5db; }
+    .text-gray-300 { color: var(--text-secondary); }
     .text-gray-400 { color: var(--text-secondary); }
     .text-gray-500 { color: var(--text-muted); }
     .text-center { text-align: center; }
@@ -324,6 +335,10 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
     .mini-flow.mini-flow-pending .mini-flow-label {
       color: var(--warning);
     }
+
+    .empty-state { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 32px 16px; color: var(--text-muted); }
+    .empty-state .bi { font-size: 32px; }
+    .empty-state p { margin: 0; font-size: 13px; }
   `]
 })
 export class LeavesComponent implements OnInit {
@@ -336,6 +351,7 @@ export class LeavesComponent implements OnInit {
   leaves = signal<LeaveRequest[]>([]);
   employees = signal<Employee[]>([]);
   showModal = signal(false);
+  loading = signal(true);
   page = signal(1);
   pageSize = signal(25);
   totalCount = signal(0);
@@ -365,6 +381,7 @@ export class LeavesComponent implements OnInit {
           this.leaves.set(res.items);
           this.totalCount.set(res.totalCount);
         }
+        this.loading.set(false);
       }
     });
   }

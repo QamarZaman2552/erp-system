@@ -42,6 +42,18 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
           </tr>
         </thead>
         <tbody>
+          <tr *ngIf="loading()">
+            <td colspan="12" class="text-center py-4">
+              <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+              <span class="ms-2 text-sm text-gray-400">Loading payroll...</span>
+            </td>
+          </tr>
+          <tr *ngIf="!loading() && payrollRecords().length === 0">
+            <td colspan="12" class="text-center py-8 text-gray-400">
+              <i class="bi bi-wallet2 fs-3 d-block mb-2"></i>
+              No payroll processed for this period yet. Click "Generate Payroll" above to compute salaries.
+            </td>
+          </tr>
           <tr *ngFor="let p of payrollRecords()">
             <td class="font-semibold">{{ p.employeeName }}</td>
             <td><span class="badge badge-info">{{ p.month }}/{{ p.year }}</span></td>
@@ -69,17 +81,12 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
               </div>
             </td>
           </tr>
-
-          <tr *ngIf="payrollRecords().length === 0">
-            <td colspan="12" class="text-center py-8 text-gray-400">
-              No payroll processed for this period yet. Click "Generate Payroll" above to compute salaries.
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
 
     <app-pagination
+      style="margin-top: 12px;"
       [page]="page()"
       [pageSize]="pageSize()"
       [totalCount]="totalCount()"
@@ -123,8 +130,9 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
       gap: 6px;
     }
 
-    .text-indigo-300 { color: #e0e0e0; }
-    .text-emerald-400 { color: #34d399; }
+    .text-indigo-300 { color: var(--text-primary); }
+    .text-emerald-400 { color: var(--success); }
+    .text-red-400 { color: var(--danger); }
     .text-sm { font-size: 13px; }
     .text-gray-400 { color: var(--text-secondary); }
     .text-center { text-align: center; }
@@ -142,6 +150,7 @@ export class PayrollComponent implements OnInit {
   page = signal(1);
   pageSize = signal(25);
   totalCount = signal(0);
+  loading = signal(false);
 
   ngOnInit(): void {
     this.loadPayroll();
@@ -165,11 +174,13 @@ export class PayrollComponent implements OnInit {
   }
 
   loadPayroll(): void {
+    this.loading.set(true);
     this.api.getPayroll(this.currentMonth, this.currentYear, this.page(), this.pageSize()).subscribe({
       next: (res) => {
         if (res?.items) this.payrollRecords.set(res.items);
         if (res?.totalCount !== undefined) this.totalCount.set(res.totalCount);
-      }
+      },
+      complete: () => this.loading.set(false)
     });
   }
 

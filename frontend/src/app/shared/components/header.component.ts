@@ -25,7 +25,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
         <span class="search-icon"><i class="bi bi-search"></i></span>
         <input type="text" [ngModel]="searchTerm()" (ngModelChange)="onSearch($any($event))" placeholder="Search employees, orders, projects..." class="search-input" />
         @if (searchTerm()) {
-          <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" (click)="clearSearch()" aria-label="Clear search" style="font-size:12px;margin-left:4px;">&times;</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 clear-search-btn" (click)="clearSearch()" aria-label="Clear search">&times;</button>
         }
       </div>
 
@@ -43,7 +43,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
         <div class="notification-wrapper">
           <button class="icon-btn" (click)="toggleNotifications()">
             <span><i class="bi bi-bell"></i></span>
-            <span class="notification-badge" *ngIf="unreadCount() > 0">{{ unreadCount() }}</span>
+            <span class="notification-badge" *ngIf="unreadCount() > 0" aria-label="Unread notifications">{{ unreadCount() }}</span>
           </button>
 
           <!-- Dropdown Menu -->
@@ -60,7 +60,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
                    *ngFor="let n of notifications()"
                    [ngClass]="{ 'unread-item': !n.isRead }"
                    (click)="openNotification(n)"
-                   style="cursor: pointer;">
+>
                 <div class="item-title">
                   <span class="me-1" [innerHTML]="typeIcon(n.type)"></span>{{ n.title }}
                 </div>
@@ -122,6 +122,10 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       border-radius: var(--radius-md);
       cursor: pointer;
       flex-shrink: 0;
+    }
+
+    .hamburger-btn:hover {
+      background: var(--bg-hover);
     }
 
     .hamburger-btn span {
@@ -188,15 +192,15 @@ import { ThemeToggleComponent } from './theme-toggle.component';
     }
 
     .jobs-pill:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--bg-hover);
     }
 
     .jobs-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #f39c12;
-      box-shadow: 0 0 6px #f39c12;
+      background: var(--warning);
+      box-shadow: 0 0 6px var(--warning);
       animation: job-pulse 1.2s ease infinite;
     }
 
@@ -208,8 +212,8 @@ import { ThemeToggleComponent } from './theme-toggle.component';
     .jobs-count {
       font-size: 12px;
       font-weight: 700;
-      background: rgba(243, 156, 18, 0.2);
-      color: #f39c12;
+      background: var(--warning-bg);
+      color: var(--warning);
       border-radius: 9999px;
       padding: 1px 7px;
       min-width: 18px;
@@ -232,7 +236,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
     }
 
     .icon-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: var(--bg-hover);
     }
 
     .notification-badge {
@@ -240,7 +244,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       top: -4px;
       right: -4px;
       background: var(--danger);
-      color: #fff;
+      color: var(--text-primary);
       font-size: 10px;
       font-weight: 700;
       width: 18px;
@@ -263,7 +267,7 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       background: var(--bg-secondary);
       border: 1px solid var(--border-color-light);
       border-radius: var(--radius-lg);
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+      box-shadow: var(--shadow-lg);
       z-index: 100;
       overflow: hidden;
     }
@@ -278,6 +282,11 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       font-size: 13px;
     }
 
+    .dropdown-header button:hover {
+      opacity: 0.8;
+      text-decoration: underline;
+    }
+
     .dropdown-list {
       max-height: 300px;
       overflow-y: auto;
@@ -287,10 +296,11 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       padding: 12px 16px;
       border-bottom: 1px solid var(--border-color);
       font-size: 13px;
+      cursor: pointer;
     }
 
     .dropdown-item:hover {
-      background: rgba(255, 255, 255, 0.03);
+      background: var(--bg-hover);
     }
 
     .item-title {
@@ -317,9 +327,14 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       font-size: 13px;
     }
 
+    .clear-search-btn {
+      font-size: 12px;
+      margin-left: 4px;
+    }
+
     .unread-item {
-      background: rgba(99, 102, 241, 0.08);
-      border-left: 2px solid #6366f1;
+      background: var(--accent-bg);
+      border-left: 2px solid var(--accent);
     }
   `]
 })

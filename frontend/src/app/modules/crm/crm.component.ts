@@ -97,6 +97,18 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="loading()">
+              <td colspan="7" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <span class="ms-2 text-sm text-gray-400">Loading customers...</span>
+              </td>
+            </tr>
+            <tr *ngIf="!loading() && customers().length === 0">
+              <td colspan="7" class="text-center py-5 text-gray-400">
+                <i class="bi bi-people fs-3 d-block mb-2"></i>
+                No customers found. Click "Add Customer" to create one.
+              </td>
+            </tr>
             <tr *ngFor="let c of customers()">
               <td class="font-semibold">{{ c.name }}</td>
               <td>{{ c.company || '—' }}</td>
@@ -124,14 +136,14 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
     <div *ngIf="activeTab === 'leads'">
       <!-- Pipeline Stats -->
       <div class="row g-3 mb-3">
-        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">{{ stageCount('New') }}</div><div class="metric-title small">New</div></div></div>
-        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Contacted') }}</div><div class="metric-title small">Contacted</div></div></div>
-        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Qualified') }}</div><div class="metric-title small">Qualified</div></div></div>
-        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Proposal') + stageCount('Negotiation') }}</div><div class="metric-title small">Proposal/Neg.</div></div></div>
-        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0 text-success">{{ stageCount('Won') }}</div><div class="metric-title small">Won</div></div></div>
-        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0 text-danger">{{ stageCount('Lost') }}</div><div class="metric-title small">Lost</div></div></div>
-        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0 text-info">{{ conversionRate() }}%</div><div class="metric-title small">Conversion</div></div></div>
-        <div class="col"><div class="card p-3 text-center"><div class="h5 mb-0">\${{ pipelineValue() | number:'1.0-0' }}</div><div class="metric-title small">Open Pipeline</div></div></div>
+        <div class="col"><div class="erp-card p-3 text-center"><div class="h5 mb-0">{{ stageCount('New') }}</div><div class="metric-title small">New</div></div></div>
+        <div class="col"><div class="erp-card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Contacted') }}</div><div class="metric-title small">Contacted</div></div></div>
+        <div class="col"><div class="erp-card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Qualified') }}</div><div class="metric-title small">Qualified</div></div></div>
+        <div class="col"><div class="erp-card p-3 text-center"><div class="h5 mb-0">{{ stageCount('Proposal') + stageCount('Negotiation') }}</div><div class="metric-title small">Proposal/Neg.</div></div></div>
+        <div class="col"><div class="erp-card p-3 text-center"><div class="h5 mb-0 text-success">{{ stageCount('Won') }}</div><div class="metric-title small">Won</div></div></div>
+        <div class="col"><div class="erp-card p-3 text-center"><div class="h5 mb-0 text-danger">{{ stageCount('Lost') }}</div><div class="metric-title small">Lost</div></div></div>
+        <div class="col"><div class="erp-card p-3 text-center"><div class="h5 mb-0 text-info">{{ conversionRate() }}%</div><div class="metric-title small">Conversion</div></div></div>
+        <div class="col"><div class="erp-card p-3 text-center"><div class="h5 mb-0">\${{ pipelineValue() | number:'1.0-0' }}</div><div class="metric-title small">Open Pipeline</div></div></div>
       </div>
 
       <div class="erp-table-container">
@@ -143,11 +155,23 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
               <th>Company</th>
               <th>Source</th>
               <th>Estimated Value</th>
-              <th style="width: 150px;">Stage</th>
+              <th>Stage</th>
               <th *ngIf="canManage()">Actions</th>
             </tr>
           </thead>
           <tbody>
+            <tr *ngIf="loading()">
+              <td colspan="7" class="text-center py-4">
+                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                <span class="ms-2 text-sm text-gray-400">Loading leads...</span>
+              </td>
+            </tr>
+            <tr *ngIf="!loading() && leads().length === 0">
+              <td colspan="7" class="text-center py-5 text-gray-400">
+                <i class="bi bi-kanban fs-3 d-block mb-2"></i>
+                No leads found. Click "Add Lead" to create one.
+              </td>
+            </tr>
             <tr *ngFor="let l of leads()">
               <td class="font-semibold">{{ l.title }}</td>
               <td>{{ l.contactName || '—' }}<div class="text-xs text-gray-400">{{ l.contactEmail }}</div></td>
@@ -161,7 +185,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
                 </select>
               </td>
               <td *ngIf="canManage()">
-                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete lead" (click)="deleteLead(l)">✕</button>
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete lead" (click)="deleteLead(l)"><i class="bi bi-x-lg"></i></button>
               </td>
             </tr>
           </tbody>
@@ -170,6 +194,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
     </div>
 
     <app-pagination
+      style="margin-top: 12px;"
       [page]="page()"
       [pageSize]="pageSize()"
       [totalCount]="totalCount()"
@@ -283,7 +308,7 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
     .active-tab {
       background: var(--bg-primary);
       border-color: var(--accent-primary);
-      color: #fff;
+      color: var(--text-primary);
     }
 
     .form-grid {
@@ -292,8 +317,8 @@ import { PaginationComponent } from '../../shared/components/pagination.componen
       gap: 14px;
     }
 
-    .text-emerald-400 { color: #34d399; }
-    .text-indigo-400 { color: #ededed; }
+    .text-emerald-400 { color: var(--success); }
+    .text-indigo-400 { color: var(--text-primary); }
     .text-sm { font-size: 13px; }
     .text-xs { font-size: 11px; }
     .text-gray-400 { color: var(--text-secondary); }
@@ -312,6 +337,7 @@ export class CrmComponent implements OnInit {
   page = signal(1);
   pageSize = signal(25);
   totalCount = signal(0);
+  loading = signal(false);
 
   selectedCustomerId: string | null = null;
   interactions = signal<any[]>([]);
@@ -357,13 +383,16 @@ export class CrmComponent implements OnInit {
   }
 
   loadData(): void {
+    this.loading.set(true);
     this.api.getCustomers(this.page(), this.pageSize()).subscribe({
       next: (res) => { if (res?.items) this.customers.set(res.items); if (res?.totalCount !== undefined) this.totalCount.set(res.totalCount); },
-      error: () => this.notify('CRM', 'Failed to load customers.', 'error')
+      error: () => this.notify('CRM', 'Failed to load customers.', 'error'),
+      complete: () => this.loading.set(false)
     });
     this.api.getLeads(this.page(), this.pageSize()).subscribe({
       next: (res) => { if (res?.items) this.leads.set(res.items); if (res?.totalCount !== undefined) this.totalCount.set(res.totalCount); },
-      error: () => this.notify('CRM', 'Failed to load leads.', 'error')
+      error: () => this.notify('CRM', 'Failed to load leads.', 'error'),
+      complete: () => this.loading.set(false)
     });
   }
 
