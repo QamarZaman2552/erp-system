@@ -121,8 +121,7 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// â”€â”€â”€ Middleware Pipeline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+//  Middleware Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
