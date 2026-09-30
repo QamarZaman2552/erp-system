@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { ApiService } from '../../core/services/api.service';
 
 interface EmailTemplate {
@@ -79,7 +80,7 @@ interface EmailTemplate {
 
         <!-- Live preview -->
         <div class="preview-frame" *ngIf="!showRaw()">
-          <div class="preview-email" [innerHTML]="renderedHtml()"></div>
+          <div class="preview-email" [innerHTML]="safeHtml()"></div>
         </div>
 
         <!-- Variable reference -->
@@ -319,6 +320,7 @@ interface EmailTemplate {
 })
 export class EmailTemplatePreviewComponent implements OnInit {
   private api = inject(ApiService);
+  private sanitizer = inject(DomSanitizer);
 
   templates = signal<EmailTemplate[]>([]);
   selectedId = signal<string>('');
@@ -337,6 +339,8 @@ export class EmailTemplatePreviewComponent implements OnInit {
     }
     return html;
   });
+
+  safeHtml = computed<SafeHtml>(() => this.sanitizer.bypassSecurityTrustHtml(this.renderedHtml()));
 
   ngOnInit(): void {
     this.api.getEmailTemplates().subscribe({

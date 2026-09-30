@@ -1,7 +1,7 @@
 import { Injectable, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Observable, tap, catchError, of } from 'rxjs';
+import { Observable, tap, catchError, of, finalize, share } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthResponse, UserInfo, ApiResponse } from '../models/erp.models';
 
@@ -20,6 +20,10 @@ export class AuthService {
   isAuthenticated = computed(() => !!this.tokenSignal());
   userRole = computed(() => this.currentUserSignal()?.role || null);
 
+  // Refresh tokens are single-use (rotated server-side). Concurrent 401s
+  // must share one in-flight refresh or the consumed token fails -> logout.
+  private refreshInFlight$: Observable<ApiResponse<AuthResponse> | null> | null = null;
+
   constructor(private http: HttpClient, private router: Router) {}
 
   login(credentials: { email: string; password: string }): Observable<ApiResponse<AuthResponse>> {
@@ -33,10 +37,11 @@ export class AuthService {
   }
 
   refreshToken(): Observable<ApiResponse<AuthResponse> | null> {
+    if (this.refreshInFlight$) return this.refreshInFlight$;
     const refreshToken = storage?.getItem('erp_refresh_token');
     if (!refreshToken) return of(null);
 
-    return this.http.post<ApiResponse<AuthResponse>>(`${this.baseUrl}/refresh-token`, { refreshToken }).pipe(
+    this.refreshInFlight$ = this.http.post<ApiResponse<AuthResponse>>(`${this.baseUrl}/refresh-token`, { refreshToken }).pipe(
       tap(res => {
         if (res.success && res.data) {
           this.setSession(res.data);
@@ -45,8 +50,13 @@ export class AuthService {
       catchError(() => {
         this.logout();
         return of(null);
-      })
+      }),
+      finalize(() => {
+        this.refreshInFlight$ = null;
+      }),
+      share()
     );
+    return this.refreshInFlight$;
   }
 
   logout(): void {

@@ -106,11 +106,11 @@ import { MyProfile, AttendanceRecord, PayrollRecord } from '../../core/models/er
           <div class="d-flex align-items-center gap-4 flex-wrap" *ngIf="todayRecord(); else notCheckedIn">
             <div>
               <small class="text-secondary d-block">Check In</small>
-              <strong>{{ todayRecord()?.checkInTime | date:'HH:mm:ss' }}</strong>
+              <strong>{{ timeOnly(todayRecord()?.checkInTime) }}</strong>
             </div>
             <div>
               <small class="text-secondary d-block">Check Out</small>
-              <strong>{{ todayRecord()?.checkOutTime | date:'HH:mm:ss' }}</strong>
+              <strong>{{ timeOnly(todayRecord()?.checkOutTime) }}</strong>
             </div>
             <div>
               <small class="text-secondary d-block">Hours</small>
@@ -329,6 +329,14 @@ export class ProfileComponent implements OnInit {
       },
       error: () => this.checking.set(false)
     });
+  }
+
+  timeOnly(value?: string | null): string {
+    if (!value) return '—';
+    const t = value.split('T').pop() || value;
+    const parts = t.split(':');
+    if (parts.length < 2) return value;
+    return `${parts[0]}:${parts[1]}`;
   }
 
   monthName(m: number): string {

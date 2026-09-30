@@ -101,10 +101,10 @@ import { Employee, Department, Designation, LinkableUser } from '../../core/mode
             </td>
             <td>
               <div class="action-btn-group">
-                <button class="btn btn-sm btn-secondary" (click)="openEdit(emp)" title="Edit">
+                <button class="btn btn-sm btn-outline-primary py-0 px-1" (click)="openEdit(emp)" title="Edit">
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-sm btn-danger" (click)="deleteEmployee(emp.id)" title="Delete">Delete</button>
+                <button class="btn btn-sm btn-outline-danger py-0 px-1" (click)="deleteEmployee(emp.id)" title="Delete"><i class="bi bi-trash"></i></button>
               </div>
             </td>
           </tr>
@@ -386,8 +386,11 @@ export class EmployeesComponent implements OnInit {
     }
   }
 
-  ngOnInit(): void {
+  constructor() {
     effect(() => this.loadEmployees());
+  }
+
+  ngOnInit(): void {
     this.loadMetadata();
   }
 
@@ -419,13 +422,11 @@ export class EmployeesComponent implements OnInit {
 
   onPageChange(p: number): void {
     this.page.set(p);
-    this.loadEmployees();
   }
 
   onPageSizeChange(size: number): void {
     this.pageSize.set(size);
     this.page.set(1);
-    this.loadEmployees();
   }
 
   loadMetadata(): void {
