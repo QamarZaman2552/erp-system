@@ -1,0 +1,192 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="820" viewBox="0 0 1200 820" font-family="Segoe UI, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="100%" stop-color="#eef2f7"/>
+    </linearGradient>
+    <filter id="sh3" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="820" fill="url(#bg3)"/>
+  <text x="600" y="46" text-anchor="middle" font-size="26" font-weight="700" fill="#0f172a">Enterprise ERP — Module Map</text>
+  <text x="600" y="72" text-anchor="middle" font-size="14" fill="#64748b">19 feature modules · 165 API endpoints · 31 database entities · 4 user roles</text>
+
+  <!-- stats row -->
+  <g font-size="13">
+    <g transform="translate(60,96)">
+      <rect width="252" height="70" rx="12" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+      <text x="126" y="32" text-anchor="middle" font-size="24" font-weight="700" fill="#2563eb">19</text>
+      <text x="126" y="54" text-anchor="middle" font-size="12" fill="#64748b">Frontend Modules</text>
+    </g>
+    <g transform="translate(336,96)">
+      <rect width="252" height="70" rx="12" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+      <text x="126" y="32" text-anchor="middle" font-size="24" font-weight="700" fill="#7c3aed">165</text>
+      <text x="126" y="54" text-anchor="middle" font-size="12" fill="#64748b">REST Endpoints</text>
+    </g>
+    <g transform="translate(612,96)">
+      <rect width="252" height="70" rx="12" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+      <text x="126" y="32" text-anchor="middle" font-size="24" font-weight="700" fill="#0891b2">31</text>
+      <text x="126" y="54" text-anchor="middle" font-size="12" fill="#64748b">Database Entities</text>
+    </g>
+    <g transform="translate(888,96)">
+      <rect width="252" height="70" rx="12" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+      <text x="126" y="32" text-anchor="middle" font-size="24" font-weight="700" fill="#dc2626">4</text>
+      <text x="126" y="54" text-anchor="middle" font-size="12" fill="#64748b">RBAC Roles</text>
+    </g>
+  </g>
+
+  <!-- ===== HR cluster ===== -->
+  <g font-size="13">
+    <rect x="60" y="196" width="352" height="230" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+    <rect x="60" y="196" width="352" height="44" rx="14" fill="#2563eb"/>
+    <rect x="60" y="226" width="352" height="14" fill="#2563eb"/>
+    <text x="236" y="224" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">HUMAN RESOURCES</text>
+
+    <g fill="#eff6ff" stroke="#93c5fd">
+      <rect x="78" y="254" width="158" height="48" rx="8"/>
+      <rect x="248" y="254" width="146" height="48" rx="8"/>
+      <rect x="78" y="312" width="158" height="48" rx="8"/>
+      <rect x="248" y="312" width="146" height="48" rx="8"/>
+      <rect x="78" y="370" width="316" height="42" rx="8"/>
+    </g>
+    <g fill="#1e293b" font-weight="600" font-size="12.5">
+      <text x="157" y="274" text-anchor="middle">Employees</text>
+      <text x="321" y="274" text-anchor="middle">Attendance</text>
+      <text x="157" y="332" text-anchor="middle">Leave Requests</text>
+      <text x="321" y="332" text-anchor="middle">Payroll</text>
+      <text x="236" y="396" text-anchor="middle">My Team · Org Chart</text>
+    </g>
+  </g>
+
+  <!-- ===== Sales cluster ===== -->
+  <g font-size="13">
+    <rect x="432" y="196" width="352" height="230" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+    <rect x="432" y="196" width="352" height="44" rx="14" fill="#7c3aed"/>
+    <rect x="432" y="226" width="352" height="14" fill="#7c3aed"/>
+    <text x="608" y="224" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">SALES &amp; OPERATIONS</text>
+
+    <g fill="#f5f3ff" stroke="#c4b5fd">
+      <rect x="450" y="254" width="158" height="48" rx="8"/>
+      <rect x="620" y="254" width="146" height="48" rx="8"/>
+      <rect x="450" y="312" width="158" height="48" rx="8"/>
+      <rect x="620" y="312" width="146" height="48" rx="8"/>
+      <rect x="450" y="370" width="316" height="42" rx="8"/>
+    </g>
+    <g fill="#1e293b" font-weight="600" font-size="12.5">
+      <text x="529" y="274" text-anchor="middle">Sales &amp; Invoices</text>
+      <text x="693" y="274" text-anchor="middle">Purchase Orders</text>
+      <text x="529" y="332" text-anchor="middle">Inventory</text>
+      <text x="693" y="332" text-anchor="middle">Suppliers</text>
+      <text x="608" y="396" text-anchor="middle">Stock Movements · Categories</text>
+    </g>
+  </g>
+
+  <!-- ===== Delivery cluster ===== -->
+  <g font-size="13">
+    <rect x="804" y="196" width="336" height="230" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+    <rect x="804" y="196" width="336" height="44" rx="14" fill="#0891b2"/>
+    <rect x="804" y="226" width="336" height="14" fill="#0891b2"/>
+    <text x="972" y="224" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">PROJECT DELIVERY</text>
+
+    <g fill="#ecfeff" stroke="#67e8f9">
+      <rect x="822" y="254" width="146" height="48" rx="8"/>
+      <rect x="980" y="254" width="144" height="48" rx="8"/>
+      <rect x="822" y="312" width="146" height="48" rx="8"/>
+      <rect x="980" y="312" width="144" height="48" rx="8"/>
+      <rect x="822" y="370" width="302" height="42" rx="8"/>
+    </g>
+    <g fill="#1e293b" font-weight="600" font-size="12.5">
+      <text x="895" y="274" text-anchor="middle">Projects</text>
+      <text x="1052" y="274" text-anchor="middle">Tasks</text>
+      <text x="895" y="332" text-anchor="middle">Recurring Tasks</text>
+      <text x="1052" y="332" text-anchor="middle">Documents</text>
+      <text x="973" y="396" text-anchor="middle">Assignments · Members</text>
+    </g>
+  </g>
+
+  <!-- ===== CRM cluster ===== -->
+  <g font-size="13">
+    <rect x="60" y="446" width="352" height="180" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+    <rect x="60" y="446" width="352" height="44" rx="14" fill="#dc2626"/>
+    <rect x="60" y="476" width="352" height="14" fill="#dc2626"/>
+    <text x="236" y="474" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">CRM &amp; GROWTH</text>
+
+    <g fill="#fef2f2" stroke="#fca5a5">
+      <rect x="78" y="504" width="158" height="48" rx="8"/>
+      <rect x="248" y="504" width="146" height="48" rx="8"/>
+      <rect x="78" y="562" width="316" height="46" rx="8"/>
+    </g>
+    <g fill="#1e293b" font-weight="600" font-size="12.5">
+      <text x="157" y="524" text-anchor="middle">Customers</text>
+      <text x="321" y="524" text-anchor="middle">Leads Pipeline</text>
+      <text x="236" y="582" text-anchor="middle">Interaction Logs · Deals</text>
+    </g>
+  </g>
+
+  <!-- ===== Finance cluster ===== -->
+  <g font-size="13">
+    <rect x="432" y="446" width="352" height="180" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+    <rect x="432" y="446" width="352" height="44" rx="14" fill="#16a34a"/>
+    <rect x="432" y="476" width="352" height="14" fill="#16a34a"/>
+    <text x="608" y="474" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">FINANCE</text>
+
+    <g fill="#f0fdf4" stroke="#86efac">
+      <rect x="450" y="504" width="158" height="48" rx="8"/>
+      <rect x="620" y="504" width="146" height="48" rx="8"/>
+      <rect x="450" y="562" width="316" height="46" rx="8"/>
+    </g>
+    <g fill="#1e293b" font-weight="600" font-size="12.5">
+      <text x="529" y="524" text-anchor="middle">Expenses</text>
+      <text x="693" y="524" text-anchor="middle">Budgets</text>
+      <text x="608" y="582" text-anchor="middle">Transactions · Categories</text>
+    </g>
+  </g>
+
+  <!-- ===== Platform cluster ===== -->
+  <g font-size="13">
+    <rect x="804" y="446" width="336" height="180" rx="14" fill="#ffffff" stroke="#cbd5e1" filter="url(#sh3)"/>
+    <rect x="804" y="446" width="336" height="44" rx="14" fill="#0f172a"/>
+    <rect x="804" y="476" width="336" height="14" fill="#0f172a"/>
+    <text x="972" y="474" text-anchor="middle" font-size="15" font-weight="700" fill="#ffffff">PLATFORM</text>
+
+    <g fill="#f1f5f9" stroke="#cbd5e1">
+      <rect x="822" y="504" width="146" height="48" rx="8"/>
+      <rect x="980" y="504" width="144" height="48" rx="8"/>
+      <rect x="822" y="562" width="302" height="46" rx="8"/>
+    </g>
+    <g fill="#1e293b" font-weight="600" font-size="12.5">
+      <text x="895" y="524" text-anchor="middle">Dashboard</text>
+      <text x="1052" y="524" text-anchor="middle">Audit Trail</text>
+      <text x="973" y="582" text-anchor="middle">Users · Email Templates · Settings</text>
+    </g>
+  </g>
+
+  <!-- ===== bottom: roles + cross-cutting ===== -->
+  <rect x="60" y="650" width="1080" height="130" rx="14" fill="#0f172a"/>
+  <text x="90" y="684" font-size="14" font-weight="700" fill="#ffffff">Security Model — Role-Based Access Control</text>
+
+  <g font-size="12.5">
+    <g transform="translate(90,700)">
+      <rect width="240" height="60" rx="8" fill="#1e293b" stroke="#334155"/>
+      <text x="120" y="26" text-anchor="middle" font-weight="700" fill="#f8fafc">Admin</text>
+      <text x="120" y="46" text-anchor="middle" font-size="11" fill="#94a3b8">full system access</text>
+    </g>
+    <g transform="translate(350,700)">
+      <rect width="240" height="60" rx="8" fill="#1e293b" stroke="#334155"/>
+      <text x="120" y="26" text-anchor="middle" font-weight="700" fill="#f8fafc">HR</text>
+      <text x="120" y="46" text-anchor="middle" font-size="11" fill="#94a3b8">employees · attendance · payroll</text>
+    </g>
+    <g transform="translate(610,700)">
+      <rect width="240" height="60" rx="8" fill="#1e293b" stroke="#334155"/>
+      <text x="120" y="26" text-anchor="middle" font-weight="700" fill="#f8fafc">Manager</text>
+      <text x="120" y="46" text-anchor="middle" font-size="11" fill="#94a3b8">projects · team · approvals</text>
+    </g>
+    <g transform="translate(870,700)">
+      <rect width="250" height="60" rx="8" fill="#1e293b" stroke="#334155"/>
+      <text x="125" y="26" text-anchor="middle" font-weight="700" fill="#f8fafc">Employee</text>
+      <text x="125" y="46" text-anchor="middle" font-size="11" fill="#94a3b8">profile · own attendance · leaves</text>
+    </g>
+  </g>
+</svg>

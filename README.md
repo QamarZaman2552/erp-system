@@ -117,6 +117,12 @@ backend/
 
 Enums are serialized as strings globally (`JsonStringEnumConverter`) so the API speaks `"Active"`, `"High"`, `"Todo"` etc. in both directions.
 
+**Diagrams** (SVG + high-res PNG in [`docs/diagrams/`](docs/diagrams/)):
+
+| System Architecture | Module Map | Auth & Request Flow |
+|---|---|---|
+| ![System Architecture](docs/diagrams/system-architecture.png) | ![Module Map](docs/diagrams/module-map.png) | ![Auth & Request Flow](docs/diagrams/auth-request-flow.png) |
+
 ---
 
 ## 🚀 Getting Started
