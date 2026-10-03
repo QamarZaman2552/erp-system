@@ -79,6 +79,9 @@ builder.Services.AddAuthorization(options =>
 // SignalR
 builder.Services.AddSignalR();
 
+// Health checks (liveness probe for uptime monitors / containers)
+builder.Services.AddHealthChecks();
+
 // CORS
 builder.Services.AddCors(options =>
 {
@@ -140,6 +143,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHealthChecks("/health");
 
 // Global unhandled exception handler (catches silent crashes)
 AppDomain.CurrentDomain.UnhandledException += (sender, e) =>
