@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal, ViewChild, HostListener, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, Router } from '@angular/router';
@@ -23,9 +23,11 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       <!-- Search or Page Indicator -->
       <div class="search-box">
         <span class="search-icon"><i class="bi bi-search"></i></span>
-        <input type="text" [ngModel]="searchTerm()" (ngModelChange)="onSearch($any($event))" placeholder="Search employees, orders, projects..." class="search-input" />
+        <input #searchInput type="text" [ngModel]="searchTerm()" (ngModelChange)="onSearch($any($event))" placeholder="Search employees, orders, projects..." class="search-input" />
         @if (searchTerm()) {
           <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1 clear-search-btn" (click)="clearSearch()" aria-label="Clear search">&times;</button>
+        } @else {
+          <kbd class="search-hint" aria-hidden="true">{{ isMac ? '\u2318' : 'Ctrl' }} K</kbd>
         }
       </div>
 
@@ -168,6 +170,28 @@ import { ThemeToggleComponent } from './theme-toggle.component';
       font-size: 13px;
       outline: none;
       width: 100%;
+    }
+
+    .search-box:focus-within {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+
+    .search-hint {
+      flex-shrink: 0;
+      font-family: var(--font-mono, monospace);
+      font-size: 10.5px;
+      line-height: 1;
+      color: var(--text-muted);
+      background: var(--bg-secondary, rgba(255, 255, 255, 0.06));
+      border: 1px solid var(--border-color);
+      border-radius: 5px;
+      padding: 4px 6px;
+      transition: opacity 0.15s ease;
+    }
+
+    .search-box:focus-within .search-hint {
+      opacity: 0;
     }
 
     .header-actions {
@@ -356,6 +380,33 @@ export class HeaderComponent {
 
   activeJobsCount = computed(() => this.jobs().filter(j => j.status === 'running').length);
   searchTerm = this.searchService.search;
+
+  @ViewChild('searchInput') searchInput?: ElementRef<HTMLInputElement>;
+  readonly isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+
+  @HostListener('window:keydown', ['$event'])
+  onGlobalKeydown(e: KeyboardEvent): void {
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      this.focusSearch();
+      return;
+    }
+    if (e.key === '/' && !mod && !this.isTypingTarget(e.target)) {
+      e.preventDefault();
+      this.focusSearch();
+    }
+  }
+
+  private isTypingTarget(target: EventTarget | null): boolean {
+    const el = target as HTMLElement | null;
+    return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+  }
+
+  private focusSearch(): void {
+    this.searchInput?.nativeElement.focus();
+    this.searchInput?.nativeElement.select();
+  }
 
   notifications = this.notificationService.notifications;
   unreadCount = this.notificationService.unreadCount;
