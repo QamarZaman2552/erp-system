@@ -12,6 +12,38 @@ A full-stack **Enterprise Resource Planning** suite covering HR, Projects & Task
 
 ---
 
+## 📸 Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/01-dashboard.png" width="420" alt="Dashboard"><br><sub><b>Dashboard — KPI Overview</b></sub></td>
+    <td align="center"><img src="docs/screenshots/02-dashboard-analytics.png" width="420" alt="Dashboard Analytics"><br><sub><b>Analytics &amp; Activity Feed</b></sub></td>
+    <td align="center"><img src="docs/screenshots/03-employees.png" width="420" alt="Employee Management"><br><sub><b>Employee Management</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/04-attendance.png" width="420" alt="Attendance"><br><sub><b>Attendance Tracking</b></sub></td>
+    <td align="center"><img src="docs/screenshots/05-leave-management.png" width="420" alt="Leave Management"><br><sub><b>Leave Management</b></sub></td>
+    <td align="center"><img src="docs/screenshots/06-payroll.png" width="420" alt="Payroll"><br><sub><b>Payroll</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/07-projects-tasks.png" width="420" alt="Projects & Tasks"><br><sub><b>Projects &amp; Tasks</b></sub></td>
+    <td align="center"><img src="docs/screenshots/08-crm.png" width="420" alt="CRM"><br><sub><b>CRM Pipeline</b></sub></td>
+    <td align="center"><img src="docs/screenshots/09-sales-invoices.png" width="420" alt="Sales & Invoices"><br><sub><b>Sales &amp; Invoices</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/10-finance-budget.png" width="420" alt="Finance & Budget"><br><sub><b>Finance &amp; Budget</b></sub></td>
+    <td align="center"><img src="docs/screenshots/11-purchase-orders.png" width="420" alt="Purchase Orders"><br><sub><b>Purchase Orders</b></sub></td>
+    <td align="center"><img src="docs/screenshots/12-email-templates.png" width="420" alt="Email Templates"><br><sub><b>Email Templates — Live Preview</b></sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/13-user-management.png" width="420" alt="User Management"><br><sub><b>User Management (RBAC)</b></sub></td>
+    <td align="center"><img src="docs/screenshots/14-dark-mode-dashboard.png" width="420" alt="Dark Mode"><br><sub><b>Dark Mode</b></sub></td>
+    <td align="center"><img src="docs/screenshots/15-dark-login.png" width="420" alt="Login"><br><sub><b>Login — Dark Theme</b></sub></td>
+  </tr>
+</table>
+
+---
+
 ## ✨ Features
 
 ### 🔐 Authentication & Security
